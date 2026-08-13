@@ -53,7 +53,7 @@ export default function Home() {
           </Link>
           <Link
             className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md"
-            href="/dashboard"
+            href="/profil-semadiksi"
           >
             Profil SEMADIKSI
           </Link>
@@ -109,7 +109,7 @@ export default function Home() {
           </Link>
           <Link
             className="text-on-surface-variant py-2 border-b border-surface-variant/10"
-            href="/dashboard"
+            href="/profil-semadiksi"
             onClick={() => setMobileMenuOpen(false)}
           >
             Profil SEMADIKSI
@@ -170,7 +170,7 @@ export default function Home() {
                 Lihat Kegiatan
               </Link>
               <Link
-                href="/dashboard"
+                href="/profil-semadiksi"
                 className="w-full sm:w-auto border-2 border-primary text-primary px-lg py-4 rounded-full font-label-md text-label-md hover:bg-primary/5 transition-all active:scale-95 text-center"
               >
                 Tentang Kami
@@ -490,7 +490,7 @@ export default function Home() {
           <div className="flex gap-md">
             <Link
               className="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md"
-              href="/dashboard"
+              href="/profil-semadiksi"
             >
               Tentang Kami
             </Link>

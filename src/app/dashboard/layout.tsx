@@ -14,7 +14,7 @@ export default function DashboardLayout({
   const [currentUser, setCurrentUser] = useState({
     name: "Ahmad Fauzan",
     university: "Universitas Diponegoro",
-    kipStatus: "KIP",
+    kipStatus: "KIP UNUSA",
     verificationStatus: "Verified"
   });
 
@@ -80,6 +80,11 @@ export default function DashboardLayout({
       icon: "workspace_premium",
     },
     {
+      name: "Laporan Kegiatan",
+      href: "/dashboard/pelaporan",
+      icon: "upload_file",
+    },
+    {
       name: "Tiket & Pembayaran",
       href: "/dashboard/pembayaran",
       icon: "confirmation_number",
@@ -111,7 +116,7 @@ export default function DashboardLayout({
               Halo, {currentUser.name}
             </p>
             <p className="font-label-sm text-label-sm text-on-surface-variant">
-              {currentUser.kipStatus === "KIP" ? "Mahasiswa KIP-K" : "Mahasiswa Non-KIP"}
+              {currentUser.kipStatus === "KIP UNUSA" ? "Mahasiswa KIP UNUSA" : "Umum"}
             </p>
           </div>
           <Link
@@ -164,7 +169,14 @@ export default function DashboardLayout({
 
           {/* Navigation Links */}
           <nav className="flex-1 flex flex-col gap-1 px-2">
-            {navLinks.map((link) => {
+            {navLinks
+              .filter((link) => {
+                if (link.href === "/dashboard/pelaporan") {
+                  return currentUser.kipStatus === "KIP UNUSA";
+                }
+                return true;
+              })
+              .map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link
@@ -208,7 +220,7 @@ export default function DashboardLayout({
                 workspace_premium
               </span>
               <span className="font-label-md text-label-md font-bold text-tertiary">
-                Kegiatan KIP-K
+                Kegiatan KIP UNUSA
               </span>
             </Link>
             <a

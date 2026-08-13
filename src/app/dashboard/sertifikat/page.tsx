@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface AttendedActivity {
   id: string;
@@ -20,6 +20,38 @@ export default function SertifikatPage() {
   const [filterTab, setFilterTab] = useState<"Semua" | "Selesai" | "Terdaftar">("Semua");
   const [selectedCert, setSelectedCert] = useState<AttendedActivity | null>(null);
   const [showInfoModal, setShowInfoModal] = useState<AttendedActivity | null>(null);
+  const [weights, setWeights] = useState<{ [key: string]: number }>({
+    Workshop: 40,
+    Seminar: 30,
+    Sosial: 20,
+    Lomba: 10
+  });
+
+  useEffect(() => {
+    const stored = localStorage.getItem("semadiksi_category_weights");
+    if (stored) {
+      try {
+        setWeights(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, []);
+
+  const getCategoryWeight = (category: string) => {
+    const cat = category.toLowerCase();
+    if (cat.includes("workshop") || cat.includes("teknologi") || cat.includes("iptek")) {
+      return weights.Workshop || 40;
+    }
+    if (cat.includes("seminar") || cat.includes("kepemimpinan") || cat.includes("webinar") || cat.includes("kuliah")) {
+      return weights.Seminar || 30;
+    }
+    if (cat.includes("sosial") || cat.includes("pengabdian") || cat.includes("masyarakat") || cat.includes("volunteer")) {
+      return weights.Sosial || 20;
+    }
+    if (cat.includes("lomba") || cat.includes("kontes") || cat.includes("kompetisi")) {
+      return weights.Lomba || 10;
+    }
+    return weights[category] || 25;
+  };
 
   const myActivities: AttendedActivity[] = [
     {
@@ -89,6 +121,14 @@ export default function SertifikatPage() {
   const completedCount = myActivities.filter((a) => a.status === "Selesai").length;
   const registeredCount = myActivities.filter((a) => a.status === "Terdaftar").length;
 
+  const totalScore = myActivities
+    .filter((act) => act.status === "Selesai")
+    .reduce((acc, act) => {
+      const numericPoints = parseInt(act.duration, 10) || 8;
+      const weightPercentage = getCategoryWeight(act.category);
+      return acc + (numericPoints * (weightPercentage / 100));
+    }, 0);
+
   const handleDownload = (act: AttendedActivity) => {
     alert(`Mengunduh sertifikat resmi untuk: \n${act.title}\nNomor Seri: ${act.code}`);
   };
@@ -107,7 +147,7 @@ export default function SertifikatPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
           {/* Card 1 */}
           <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-5 shadow-[0px_4px_20px_0px_rgba(27,109,36,0.03)] flex items-center gap-4 hover:shadow-[0px_8px_30px_0px_rgba(27,109,36,0.06)] hover:-translate-y-0.5 transition-all duration-300">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -136,6 +176,16 @@ export default function SertifikatPage() {
             <div>
               <p className="text-on-surface-variant text-label-sm font-semibold uppercase tracking-wider">Kegiatan Mendatang</p>
               <h3 className="text-2xl font-extrabold text-on-surface mt-1">{registeredCount} Terdaftar</h3>
+            </div>
+          </div>
+          {/* Card 4 */}
+          <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-5 shadow-[0px_4px_20px_0px_rgba(27,109,36,0.03)] flex items-center gap-4 hover:shadow-[0px_8px_30px_0px_rgba(27,109,36,0.06)] hover:-translate-y-0.5 transition-all duration-300">
+            <div className="w-12 h-12 rounded-xl bg-secondary-container/10 flex items-center justify-center text-secondary">
+              <span className="material-symbols-outlined text-[28px] font-bold">monitoring</span>
+            </div>
+            <div>
+              <p className="text-on-surface-variant text-label-sm font-semibold uppercase tracking-wider">Skor Keaktifan</p>
+              <h3 className="text-2xl font-extrabold text-on-surface mt-1">{totalScore.toFixed(1)} Poin</h3>
             </div>
           </div>
         </div>

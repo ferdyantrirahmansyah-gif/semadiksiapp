@@ -1,8 +1,74 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function DashboardHome() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [totalXp, setTotalXp] = useState<number>(1000);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("semadiksi_current_user");
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {}
+    }
+
+    // Load registered and global activities to calculate dynamic XP
+    const storedRegistered = localStorage.getItem("semadiksi_registered_activities");
+    const storedGlobalActs = localStorage.getItem("semadiksi_activities");
+
+    let registeredList: any[] = [];
+    if (storedRegistered) {
+      try {
+        registeredList = JSON.parse(storedRegistered);
+      } catch (e) {}
+    }
+
+    let globalActs: any[] = [];
+    if (storedGlobalActs) {
+      try {
+        globalActs = JSON.parse(storedGlobalActs);
+      } catch (e) {}
+    }
+
+    // Map of activity title -> xpPoints
+    const xpMap: { [key: string]: number } = {
+      "Latihan Kepemimpinan Mahasiswa Berprestasi (LKMB)": 300,
+      "Latihan Kepemimpinan Mahasiswa Berprestasi": 300,
+      "SEMADIKSI Berbagi: Volunteer Mengajar Pesisir": 450,
+      "SEMADIKSI Peduli: Bakti Sosial Akhir Tahun": 200,
+      "Workshop Web Development Modern dengan Next.js": 250,
+      "SEMADIKSI Cultural Night & Reunion": 150,
+      "Lomba Poster Digital SEMADIKSI 2025": 500
+    };
+
+    globalActs.forEach((act: any) => {
+      if (act.title && act.xpPoints !== undefined) {
+        xpMap[act.title] = act.xpPoints;
+      }
+    });
+
+    // Default completed activities: LKMB (300 XP), Volunteer (450 XP), Workshop (250 XP) -> 1000 XP
+    let sum = 1000;
+
+    // Add registered completed activities
+    registeredList.forEach((act: any) => {
+      if (act.status === "Selesai") {
+        const defaultTitles = [
+          "Latihan Kepemimpinan Mahasiswa Berprestasi (LKMB)",
+          "SEMADIKSI Berbagi: Volunteer Mengajar Pesisir",
+          "Workshop Web Development Modern dengan Next.js"
+        ];
+        if (!defaultTitles.includes(act.title)) {
+          sum += xpMap[act.title] || act.xpPoints || 100;
+        }
+      }
+    });
+
+    setTotalXp(sum);
+  }, []);
   const highlights = [
     {
       title: "SEMADIKSI Mengajar",
@@ -106,7 +172,7 @@ export default function DashboardHome() {
               Poin Keaktifan
             </p>
             <p className="font-headline-md text-3xl font-extrabold">
-              1.250 <span className="text-lg font-normal">XP</span>
+              {totalXp.toLocaleString("id-ID")} <span className="text-lg font-normal">XP</span>
             </p>
           </div>
         </div>

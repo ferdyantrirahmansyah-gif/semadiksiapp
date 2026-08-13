@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function PembayaranContent() {
@@ -8,15 +8,57 @@ function PembayaranContent() {
   const searchParams = useSearchParams();
 
   // Parse activity details from URL query params
-  const title = searchParams.get("title") || "Gelar Karya Mahasiswa 2024";
-  const priceStr = searchParams.get("price") || "IDR 25.000";
-  const date = searchParams.get("date") || "Sabtu, 15 Juni 2024";
-  const img = searchParams.get("img") || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
-  const desc = searchParams.get("desc") || "";
-  const type = searchParams.get("type") || "Umum";
+  const titleQuery = searchParams.get("title") || "";
+  const priceQuery = searchParams.get("price") || "";
+  const dateQuery = searchParams.get("date") || "";
+  const imgQuery = searchParams.get("img") || "";
+  const descQuery = searchParams.get("desc") || "";
+  const typeQuery = searchParams.get("type") || "";
+  const activityId = searchParams.get("activityId") || "";
+  const requireFileUploadQuery = searchParams.get("requireFileUpload") === "true";
+  const fileUploadInstructionQuery = searchParams.get("fileUploadInstruction") || "";
+
+  // Resolve activity details from localStorage if available
+  let resolvedActivity: any = null;
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("semadiksi_activities");
+    if (stored) {
+      try {
+        const list = JSON.parse(stored);
+        resolvedActivity = list.find((act: any) => (activityId && act.id === activityId) || act.title === titleQuery);
+      } catch (e) {}
+    }
+  }
+
+  const title = resolvedActivity?.title || titleQuery || "Gelar Karya Mahasiswa 2024";
+  const priceStr = resolvedActivity?.price || priceQuery || "IDR 25.000";
+  const date = resolvedActivity?.date || dateQuery || "Sabtu, 15 Juni 2024";
+  const img = resolvedActivity?.img || imgQuery || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
+  const desc = resolvedActivity?.desc || descQuery || "";
+  const type = resolvedActivity?.category || resolvedActivity?.type || typeQuery || "Umum";
+  const requireFileUpload = resolvedActivity ? !!resolvedActivity.requireFileUpload : requireFileUploadQuery;
+  const fileUploadInstruction = resolvedActivity ? resolvedActivity.fileUploadInstruction || "" : fileUploadInstructionQuery;
+
+  const requireSeatBooking = resolvedActivity ? !!resolvedActivity.enableSeatBooking : false;
 
   const [paymentMethod, setPaymentMethod] = useState("gopay");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [bookedSeatsList, setBookedSeatsList] = useState<any[]>([]);
+
+  // Load booked seats from localStorage
+  useEffect(() => {
+    if (activityId) {
+      const stored = localStorage.getItem(`semadiksi_bookings_${activityId}`);
+      if (stored) {
+        try {
+          setBookedSeatsList(JSON.parse(stored));
+        } catch (e) {
+          setBookedSeatsList([]);
+        }
+      }
+    }
+  }, [activityId]);
 
   // Check if the activity is free
   const isFree = priceStr.toLowerCase().includes("gratis") || priceStr === "IDR 0" || priceStr === "0";
@@ -41,17 +83,58 @@ function PembayaranContent() {
   const handleCheckout = () => {
     setIsProcessing(true);
     
+    // 0. Validate seat selection if enabled
+    if (requireSeatBooking && !selectedSeat) {
+      alert("Silakan pilih tempat duduk terlebih dahulu!");
+      setIsProcessing(false);
+      return;
+    }
+
+    // Load current user details
+    let userName = "Ahmad Fauzan";
+    let userEmail = "fauzan@unusa.ac.id";
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("semadiksi_current_user");
+      if (userStr) {
+        try {
+          const userObj = JSON.parse(userStr);
+          userName = userObj.name || userName;
+          userEmail = userObj.email || userEmail;
+        } catch (e) {}
+      }
+    }
+
     // Simulate payment transaction
     setTimeout(() => {
       // 1. Save to registered activities list in localStorage
       try {
         const stored = localStorage.getItem("semadiksi_registered_activities");
         const registeredList = stored ? JSON.parse(stored) : [];
+
+        // Save seat booking to global list if enabled
+        if (requireSeatBooking && selectedSeat) {
+          const storedBookings = localStorage.getItem(`semadiksi_bookings_${activityId}`);
+          const bookings = storedBookings ? JSON.parse(storedBookings) : [];
+          
+          if (bookings.some((b: any) => b.seatNumber === selectedSeat)) {
+            alert("Maaf, kursi ini baru saja dipesan oleh orang lain. Silakan pilih kursi lain!");
+            setIsProcessing(false);
+            return;
+          }
+          
+          bookings.push({
+            seatNumber: selectedSeat,
+            userName,
+            userEmail,
+            bookedAt: new Date().toLocaleString("id-ID")
+          });
+          localStorage.setItem(`semadiksi_bookings_${activityId}`, JSON.stringify(bookings));
+        }
         
         // Add current activity if not exists
         if (!registeredList.some((act: any) => act.title === title)) {
           registeredList.push({
-            id: `reg-${Date.now()}`,
+            id: activityId || `reg-${Date.now()}`,
             title,
             category: type,
             organizer: "SEMADIKSI Panitia Pelaksana",
@@ -64,9 +147,17 @@ function PembayaranContent() {
             price: priceStr,
             location: "Gedung Auditorium Utama, Kampus Pleburan",
             rundown: "08.00 - 08.30 : Registrasi & Check-in\n08.30 - 10.00 : Sesi Pembuka & Pengenalan\n10.00 - 12.00 : Sesi Inti Program\n12.00 - 13.00 : Istirahat & Networking\n13.00 - 15.00 : Workshop Praktis & Penutup",
-            speaker: "Budi Hermawan (Ketua Divisi Pengembangan) & Tim Mentor SEMADIKSI"
+            speaker: "Budi Hermawan (Ketua Divisi Pengembangan) & Tim Mentor SEMADIKSI",
+            requireFileUpload: requireFileUpload,
+            fileUploadInstruction: fileUploadInstruction,
+            bookedSeat: selectedSeat || undefined
           });
           localStorage.setItem("semadiksi_registered_activities", JSON.stringify(registeredList));
+          
+          if (!requireSeatBooking && activityId) {
+            const currentCount = parseInt(localStorage.getItem(`semadiksi_reg_count_${activityId}`) || "0", 10);
+            localStorage.setItem(`semadiksi_reg_count_${activityId}`, (currentCount + 1).toString());
+          }
         }
       } catch (e) {
         console.error("Error saving registered activity to localStorage", e);
@@ -135,6 +226,184 @@ function PembayaranContent() {
               </div>
             </div>
           </section>
+
+          {/* Section: Booking Tempat Duduk */}
+          {requireSeatBooking && (
+            <section className="bg-surface-container-lowest rounded-3xl p-6 md:p-8 shadow-sm border border-surface-variant/30 space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-surface-variant/30 pb-4">
+                <div>
+                  <h2 className="font-display font-bold text-lg text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">event_seat</span>
+                    <span>Pilih Nomor Tempat Duduk</span>
+                  </h2>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    Silakan klik kursi yang tersedia pada denah auditorium di bawah.
+                  </p>
+                </div>
+                {selectedSeat ? (
+                  <span className="px-3.5 py-1 bg-primary text-on-primary rounded-full font-bold text-xs shadow-sm flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                    <span>Kursi Pilihan: {selectedSeat}</span>
+                  </span>
+                ) : (
+                  <span className="px-3.5 py-1 bg-error/10 text-error border border-error/20 rounded-full font-bold text-xs animate-pulse">
+                    Belum Memilih Kursi
+                  </span>
+                )}
+              </div>
+
+              {(() => {
+                const cfg = resolvedActivity?.seatLayoutConfig || {
+                  rows: 6,
+                  cols: 10,
+                  aisles: [5],
+                  vipRows: ["A"],
+                  disabledSeats: [],
+                  accessibleSeats: ["A-1", "A-10"]
+                };
+
+                const getRowLabel = (index: number): string => {
+                  let label = "";
+                  let temp = index;
+                  while (temp >= 0) {
+                    label = String.fromCharCode(65 + (temp % 26)) + label;
+                    temp = Math.floor(temp / 26) - 1;
+                  }
+                  return label;
+                };
+
+                return (
+                  <div className="flex flex-col items-center space-y-5">
+                    {/* Stage layout */}
+                    <div className="w-full max-w-lg py-2.5 bg-stone-100 border-2 border-stone-300 rounded-xl text-center text-[10px] font-black text-stone-700 uppercase tracking-widest shadow-inner">
+                      PANGGUNG UTAMA / LAYAR DEPAN
+                    </div>
+
+                    {/* Dynamic Seats Grid */}
+                    <div className="p-4 bg-surface-container-low rounded-2xl border border-surface-variant/20 shadow-sm w-full overflow-x-auto overflow-y-auto max-h-[480px] flex justify-center">
+                      <div className="flex flex-col gap-1.5 p-2 bg-stone-50 border border-stone-200 rounded-xl min-w-max">
+                        {/* Col Numbers */}
+                        <div className="flex items-center gap-1 justify-center">
+                          <div className="w-7 text-center font-bold text-[9px] text-stone-400"></div>
+                          {Array.from({ length: cfg.cols }).map((_, cIdx) => {
+                            const colNo = cIdx + 1;
+                            const isAisle = cfg.aisles?.includes(colNo);
+
+                            return (
+                              <Fragment key={`student-col-hdr-${colNo}`}>
+                                <div className="w-7 h-5 text-center font-bold text-[9px] text-stone-400 flex items-center justify-center">
+                                  {colNo}
+                                </div>
+                                {isAisle && (
+                                  <div className="w-5 text-center text-[8px] font-bold text-stone-300 italic">
+                                    gang
+                                  </div>
+                                )}
+                              </Fragment>
+                            );
+                          })}
+                        </div>
+
+                        {/* Rows */}
+                        {Array.from({ length: cfg.rows }).map((_, rIdx) => {
+                          const rowLabel = getRowLabel(rIdx);
+                          const isVipRow = cfg.vipRows?.includes(rowLabel);
+
+                          return (
+                            <div key={`student-row-${rowLabel}`} className="flex items-center gap-1 justify-center">
+                              {/* Row Label */}
+                              <div className={`w-7 font-bold text-xs text-right pr-1 self-center ${isVipRow ? "text-error font-black" : "text-stone-600"}`}>
+                                {rowLabel}
+                              </div>
+
+                              {/* Seats */}
+                              {Array.from({ length: cfg.cols }).map((_, cIdx) => {
+                                const colNo = cIdx + 1;
+                                const seatNo = `${rowLabel}-${colNo}`;
+                                const isAisle = cfg.aisles?.includes(colNo);
+                                const isDisabled = cfg.disabledSeats?.includes(seatNo);
+                                const isAccessible = cfg.accessibleSeats?.includes(seatNo);
+
+                                if (isDisabled) {
+                                  return (
+                                    <Fragment key={seatNo}>
+                                      <div
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[8px] bg-stone-200 border border-dashed border-stone-300 text-stone-400 opacity-35 select-none"
+                                        title={`Kursi ${seatNo} (Nonaktif)`}
+                                      >
+                                        ✕
+                                      </div>
+                                      {isAisle && <div className="w-5 flex items-center justify-center text-stone-400 font-bold opacity-40">│</div>}
+                                    </Fragment>
+                                  );
+                                }
+
+                                const isBooked = bookedSeatsList.some((b: any) => b.seatNumber === seatNo);
+                                const isSelected = selectedSeat === seatNo;
+
+                                return (
+                                  <Fragment key={seatNo}>
+                                    <button
+                                      type="button"
+                                      disabled={isBooked}
+                                      onClick={() => setSelectedSeat(isSelected ? null : seatNo)}
+                                      title={isBooked ? `Kursi ${seatNo} (Sudah Dipesan)` : isVipRow ? `Pilih Kursi VIP ${seatNo}` : isAccessible ? `Pilih Kursi Aksesibel ${seatNo}` : `Pilih Kursi ${seatNo}`}
+                                      className={`w-7 h-7 rounded-lg flex items-center justify-center font-semibold text-[10px] border transition-all cursor-pointer select-none active:scale-90 ${isBooked
+                                        ? "bg-surface-variant border-surface-variant text-outline cursor-not-allowed opacity-60"
+                                        : isSelected
+                                          ? "bg-primary border-primary text-on-primary shadow-md scale-110 font-bold ring-2 ring-primary/40 z-10"
+                                          : isAccessible
+                                            ? "bg-blue-50 border-blue-400 text-blue-700 font-bold hover:bg-blue-100 shadow-xs"
+                                            : isVipRow
+                                              ? "bg-error/15 border-error text-error hover:bg-error/30 font-bold shadow-xs"
+                                              : "bg-surface border-surface-variant/30 text-on-surface hover:border-primary/60 hover:text-primary shadow-xs"
+                                        }`}
+                                    >
+                                      {isAccessible && !isBooked ? "♿" : colNo}
+                                    </button>
+
+                                    {isAisle && (
+                                      <div className="w-5 flex items-center justify-center text-[8px] text-stone-400 font-bold opacity-50 select-none">
+                                        │
+                                      </div>
+                                    )}
+                                  </Fragment>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Seat Map Legend */}
+                    <div className="flex flex-wrap gap-4 text-[11px] font-semibold justify-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 bg-surface border border-surface-variant/30 rounded-md"></span>
+                        <span className="text-on-surface-variant">Tersedia / Reguler</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 bg-error/15 border border-error rounded-md"></span>
+                        <span className="text-on-surface-variant font-bold text-error">Sweetbox / VIP</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 bg-blue-50 border border-blue-400 rounded-md"></span>
+                        <span className="text-blue-700 font-bold">♿ Aksesibel / Difabel</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 bg-primary border border-primary rounded-md"></span>
+                        <span className="text-primary font-bold">Pilihan Anda</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3.5 h-3.5 bg-surface-variant border border-surface-variant rounded-md"></span>
+                        <span className="text-on-surface-variant">Sudah Dipesan</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </section>
+          )}
 
           {/* Section: Metode Pembayaran (Only show if not free) */}
           {!isFree ? (
@@ -329,7 +598,7 @@ function PembayaranContent() {
             </div>
             <div className="space-y-sm">
               <button
-                disabled={isProcessing}
+                disabled={isProcessing || (requireSeatBooking && !selectedSeat)}
                 onClick={handleCheckout}
                 className="w-full bg-primary text-on-primary font-bold text-label-md py-4 rounded-full shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
@@ -356,6 +625,13 @@ function PembayaranContent() {
                       ></path>
                     </svg>
                     <span>Memproses...</span>
+                  </>
+                ) : requireSeatBooking && !selectedSeat ? (
+                  <>
+                    <span className="material-symbols-outlined text-base font-bold">
+                      event_seat
+                    </span>
+                    <span>Pilih Kursi Terlebih Dahulu</span>
                   </>
                 ) : (
                   <>

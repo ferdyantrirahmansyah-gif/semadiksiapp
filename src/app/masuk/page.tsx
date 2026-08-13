@@ -7,11 +7,11 @@ import { useState } from "react";
 export default function Masuk() {
   const router = useRouter();
   const [identity, setIdentity] = useState("");
-  const [university, setUniversity] = useState("");
-  const [kipStatus, setKipStatus] = useState("KIP");
+  const [password, setPassword] = useState("");
+  const [kipStatus, setKipStatus] = useState("KIP UNUSA");
 
   const [identityFocus, setIdentityFocus] = useState(false);
-  const [universityFocus, setUniversityFocus] = useState(false);
+  const [passwordFocus, setPasswordFocus] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,14 +37,21 @@ export default function Masuk() {
     let usersList = storedUsers ? JSON.parse(storedUsers) : [];
     let existingUser = usersList.find((u: any) => u.email.toLowerCase() === emailClean);
 
-    if (!existingUser) {
+    if (existingUser) {
+      // Validate password if it exists on the record
+      if (existingUser.password && existingUser.password !== password) {
+        alert("Password salah!");
+        return;
+      }
+    } else {
       existingUser = {
         id: `usr-${Date.now()}`,
         name: identity.split("@")[0], // Fallback name from email
         email: emailClean,
-        university: university || "Universitas Diponegoro",
-        kipStatus: kipStatus === "KIP" ? "KIP" : "Non-KIP",
-        verificationStatus: kipStatus === "KIP" ? "Pending" : "Verified"
+        university: "Universitas Diponegoro",
+        kipStatus: kipStatus === "KIP UNUSA" ? "KIP UNUSA" : "Umum",
+        verificationStatus: kipStatus === "KIP UNUSA" ? "Pending" : "Verified",
+        password: password
       };
       usersList.push(existingUser);
       localStorage.setItem("semadiksi_users", JSON.stringify(usersList));
@@ -135,32 +142,32 @@ export default function Masuk() {
                 </div>
               </div>
 
-              {/* University Input */}
+              {/* Password Input */}
               <div className="space-y-xs">
                 <label
                   className="font-label-md text-label-md text-on-surface-variant ml-1"
-                  htmlFor="university"
+                  htmlFor="password"
                 >
-                  Asal Universitas
+                  Password
                 </label>
                 <div className="relative">
                   <span
                     className={`material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                      universityFocus ? "text-primary" : "text-outline-variant"
+                      passwordFocus ? "text-primary" : "text-outline-variant"
                     }`}
                   >
-                    school
+                    lock
                   </span>
                   <input
                     className="w-full pl-12 pr-4 py-4 rounded-xl bg-surface-container border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest input-transition font-body-md text-body-md text-on-surface outline-none"
-                    id="university"
-                    name="university"
-                    placeholder="Contoh: Universitas Diponegoro"
-                    type="text"
-                    value={university}
-                    onChange={(e) => setUniversity(e.target.value)}
-                    onFocus={() => setUniversityFocus(true)}
-                    onBlur={() => setUniversityFocus(false)}
+                    id="password"
+                    name="password"
+                    placeholder="••••••••"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setPasswordFocus(true)}
+                    onBlur={() => setPasswordFocus(false)}
                     required
                   />
                 </div>
@@ -174,17 +181,17 @@ export default function Masuk() {
                 <div className="grid grid-cols-2 gap-sm">
                   <label className="cursor-pointer group">
                     <input
-                      checked={kipStatus === "KIP"}
-                      onChange={() => setKipStatus("KIP")}
+                      checked={kipStatus === "KIP UNUSA"}
+                      onChange={() => setKipStatus("KIP UNUSA")}
                       className="hidden peer"
                       name="kip_status"
                       type="radio"
-                      value="KIP"
+                      value="KIP UNUSA"
                     />
                     <div className="flex items-center justify-center gap-base py-3 px-4 rounded-xl border-2 border-transparent bg-surface-container peer-checked:bg-primary-container/10 peer-checked:border-primary transition-all duration-300">
                       <span
                         className={`material-symbols-outlined ${
-                          kipStatus === "KIP"
+                          kipStatus === "KIP UNUSA"
                             ? "text-primary fill-1"
                             : "text-outline-variant"
                         }`}
@@ -193,28 +200,28 @@ export default function Masuk() {
                       </span>
                       <span
                         className={`font-label-md text-label-md ${
-                          kipStatus === "KIP"
+                          kipStatus === "KIP UNUSA"
                             ? "text-primary font-bold"
                             : "text-on-surface-variant"
                         }`}
                       >
-                        Mahasiswa KIP
+                        Mahasiswa KIP UNUSA
                       </span>
                     </div>
                   </label>
                   <label className="cursor-pointer group">
                     <input
-                      checked={kipStatus === "Non-KIP"}
-                      onChange={() => setKipStatus("Non-KIP")}
+                      checked={kipStatus === "Umum"}
+                      onChange={() => setKipStatus("Umum")}
                       className="hidden peer"
                       name="kip_status"
                       type="radio"
-                      value="Non-KIP"
+                      value="Umum"
                     />
                     <div className="flex items-center justify-center gap-base py-3 px-4 rounded-xl border-2 border-transparent bg-surface-container peer-checked:bg-primary-container/10 peer-checked:border-primary transition-all duration-300">
                       <span
                         className={`material-symbols-outlined ${
-                          kipStatus === "Non-KIP"
+                          kipStatus === "Umum"
                             ? "text-primary"
                             : "text-outline-variant"
                         }`}
@@ -223,12 +230,12 @@ export default function Masuk() {
                       </span>
                       <span
                         className={`font-label-md text-label-md ${
-                          kipStatus === "Non-KIP"
+                          kipStatus === "Umum"
                             ? "text-primary font-bold"
                             : "text-on-surface-variant"
                         }`}
                       >
-                        Non-KIP
+                        Umum
                       </span>
                     </div>
                   </label>

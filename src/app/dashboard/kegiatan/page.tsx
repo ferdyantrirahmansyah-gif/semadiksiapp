@@ -3,7 +3,19 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
+export interface SeatLayoutConfig {
+  rows: number;
+  cols: number;
+  aisles: number[];
+  vipRows: string[];
+  accessibleSeats?: string[];
+  disabledSeats?: string[];
+  customSeatTypes?: { [seatNo: string]: "regular" | "vip" | "accessible" | "disabled" };
+  layoutPreset?: string;
+}
+
 interface Activity {
+  id?: string;
   title: string;
   category: string;
   type: string; // Seminar, Sosial, Workshop, dll.
@@ -15,7 +27,73 @@ interface Activity {
   img: string;
   latest?: boolean;
   closed?: boolean;
+  requireFileUpload?: boolean;
+  fileUploadInstruction?: string;
+  enableSeatBooking?: boolean;
+  seatLayoutConfig?: SeatLayoutConfig;
+  quota?: number;
+  xpPoints?: number;
 }
+
+const getQuotaStatus = (act: Activity) => {
+  const isSeatBooking = !!act.enableSeatBooking;
+  
+  if (isSeatBooking) {
+    let total = act.quota || 100;
+    if (act.seatLayoutConfig) {
+      total = (act.seatLayoutConfig.rows * act.seatLayoutConfig.cols) - (act.seatLayoutConfig.disabledSeats?.length || 0);
+    }
+    let booked = 0;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(`semadiksi_bookings_${act.id}`);
+      if (stored) {
+        try {
+          booked = JSON.parse(stored).length;
+        } catch (e) {}
+      } else {
+        // Initialize mock bookings to make it look active
+        const initialCount = Math.min(Math.floor(total * 0.4), 24);
+        const mockBookings = Array.from({ length: initialCount }).map((_, idx) => ({
+          seatNumber: `B-${idx + 1}`,
+          userName: "Mahasiswa KIP",
+          userEmail: "mhs@unusa.ac.id"
+        }));
+        localStorage.setItem(`semadiksi_bookings_${act.id}`, JSON.stringify(mockBookings));
+        booked = mockBookings.length;
+      }
+    }
+    return {
+      total,
+      booked,
+      available: Math.max(0, total - booked)
+    };
+  } else {
+    const total = act.quota || 100;
+    let booked = 0;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(`semadiksi_reg_count_${act.id}`);
+      if (stored) {
+        booked = parseInt(stored, 10) || 0;
+      } else {
+        // Generate a deterministic mock registration count based on activity title
+        let charSum = 0;
+        for (let i = 0; i < act.title.length; i++) {
+          charSum += act.title.charCodeAt(i);
+        }
+        const minPercent = 35;
+        const maxPercent = 75;
+        const percent = minPercent + (charSum % (maxPercent - minPercent));
+        booked = Math.floor((total * percent) / 100);
+        localStorage.setItem(`semadiksi_reg_count_${act.id}`, booked.toString());
+      }
+    }
+    return {
+      total,
+      booked,
+      available: Math.max(0, total - booked)
+    };
+  }
+};
 
 export default function KegiatanPage() {
   const [search, setSearch] = useState("");
@@ -24,6 +102,7 @@ export default function KegiatanPage() {
 
   const defaultActs: Activity[] = [
     {
+      id: "act-a",
       title: "SEMADIKSI Peduli: Bakti Sosial Akhir Tahun",
       category: "Sosial",
       type: "Sosial",
@@ -32,10 +111,12 @@ export default function KegiatanPage() {
       status: "Gratis",
       price: "Gratis",
       tags: ["KIP-K", "Sosial"],
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAJjFnnOT1uRw3AzSrpjK7O1l8C-DZgjx42__Bc-mF4QPRiwt9843RkY_tua0A7SDtfLcdbIgVjejrOdAmCMkn_sUtEP-oo2wLD8s0bPLKgCIy2bFZ1KzZgAwez0RouTEKeHKyIGeNuXmhN6aFWiFOJzhTBV8ULDJTt0dHQhZxifP1QordSIU5OPVvpdU0Z1OKyH1NmzVjiUffcWKjAjpJUwIPBFi23W-AeNCJcm78USgZLcjqAMRLO1g",
+      img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800",
       latest: true,
+      xpPoints: 200
     },
     {
+      id: "act-b",
       title: "Latihan Kepemimpinan Mahasiswa Berprestasi",
       category: "Seminar",
       type: "Seminar",
@@ -44,10 +125,12 @@ export default function KegiatanPage() {
       status: "Pendaftaran Ditutup",
       price: "IDR 25.000",
       tags: ["Kepemimpinan", "Internal"],
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDfSBLMGaaiBSsHUfV97CbiGvDC8aHHToUnyAp1Nl4nvkYZQWDJYIDFKMSvXkh47UKsg5W1b8bbuGnS1PNoYSJM6NndroxzoSw7cJsSIY7pf4Qovl29f0HsV-ciQTizbcOTWsU7J_4N0_K5MbYPv3SFUwL4kfwedHMavywdCZ8tgwuY6sLW2L1JIvjB0ainTR1IciDA7MOd2emTvb6QBp5S4aicc876brvEDHT7FzSYQSy8bCF_gjPgmw",
+      img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
       closed: true,
+      xpPoints: 300
     },
     {
+      id: "act-c",
       title: "SEMADIKSI Cultural Night & Reunion",
       category: "Workshop",
       type: "Workshop",
@@ -56,7 +139,23 @@ export default function KegiatanPage() {
       status: "Beli Tiket",
       price: "IDR 50.000",
       tags: ["Budaya", "Hiburan"],
-      img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDyeApvLwCftrL0Sa85oc5pJl9jwpigdy5My_uMQAWfN9NkBuIuvnfajbksNCj_QWnxlbPEjMBArQcn50DdKR9_ca15qPsaadM3v16xHcuPXHCYowTfNrqwfVe2r6Lfi5pJ5B-Q5bmKGjoC3zhEGvTd6qgKL3mO8efrN_qgA20ygM2LJDIIDn7dXL_c_7pDS3SoibZvkBQZimHdNAPP0KsiY3FMYtiRyOTf1DmefcINHASJpf0X1WjQbA",
+      img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800",
+      xpPoints: 150
+    },
+    {
+      id: "act-d",
+      title: "Lomba Poster Digital SEMADIKSI 2025",
+      category: "Lomba",
+      type: "Lomba",
+      date: "15 Februari 2025",
+      desc: "Tunjukkan kreativitas Anda dalam mendesain poster digital dengan tema 'Inovasi Mahasiswa KIP-K untuk Indonesia Emas 2045'. Terbuka untuk umum dan mahasiswa KIP-K.",
+      status: "Daftar Lomba",
+      price: "Gratis",
+      tags: ["Lomba", "Kreativitas", "Nasional"],
+      img: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800",
+      requireFileUpload: true,
+      fileUploadInstruction: "Unggah karya poster digital Anda dalam format PNG/JPG dengan ukuran maksimal 5MB.",
+      xpPoints: 500
     },
   ];
 
@@ -70,6 +169,7 @@ export default function KegiatanPage() {
       }
     } else {
       setActivities(defaultActs);
+      localStorage.setItem("semadiksi_activities", JSON.stringify(defaultActs));
     }
   }, []);
 
@@ -190,7 +290,7 @@ export default function KegiatanPage() {
                     >
                       {act.desc}
                     </p>
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-4">
                       {act.tags.map((tag, tIdx) => (
                         <span
                           key={tIdx}
@@ -203,7 +303,50 @@ export default function KegiatanPage() {
                           {tag}
                         </span>
                       ))}
+                      {!act.closed && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-tertiary-container text-on-tertiary-container border border-tertiary/10 rounded-full text-xs font-bold shadow-sm">
+                          <span className="material-symbols-outlined text-[14px]">volunteer_activism</span>
+                          <span>+{act.xpPoints || 250} XP</span>
+                        </span>
+                      )}
                     </div>
+
+                    {/* Quota Status Indicator */}
+                    {(() => {
+                      const status = getQuotaStatus(act);
+                      const percentFilled = (status.booked / status.total) * 100;
+                      const isLow = status.available <= 10 && status.available > 0;
+                      const isFull = status.available === 0;
+
+                      return (
+                        <div className="mt-4 space-y-1.5 animate-in fade-in duration-200">
+                          <div className="flex justify-between items-center text-xs font-semibold text-on-surface-variant">
+                            <div className="flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[16px] text-primary">group</span>
+                              <span>Kuota Terisi: <strong className="text-on-surface">{status.booked}</strong> / {status.total} ({status.available} Tersedia)</span>
+                            </div>
+                            <div>
+                              {isFull ? (
+                                <span className="text-error font-bold">Penuh</span>
+                              ) : isLow ? (
+                                <span className="text-error font-bold animate-pulse">Sisa Sedikit</span>
+                              ) : (
+                                <span className="text-primary font-bold">Tersedia</span>
+                              )}
+                            </div>
+                          </div>
+                          {/* Progress Bar */}
+                          <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden border border-neutral-200/50">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                isFull ? "bg-error" : isLow ? "bg-error" : "bg-primary"
+                              }`}
+                              style={{ width: `${percentFilled}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="mt-6 flex items-center justify-between pt-4 border-t border-surface-variant/30">
                     <div
@@ -220,9 +363,16 @@ export default function KegiatanPage() {
                       >
                         Pendaftaran Ditutup
                       </button>
+                    ) : getQuotaStatus(act).available === 0 ? (
+                      <button
+                        className="px-8 py-3 bg-surface-variant text-on-surface-variant rounded-xl font-bold cursor-not-allowed"
+                        disabled
+                      >
+                        Kuota Penuh
+                      </button>
                     ) : (
                       <Link
-                        href={`/dashboard/pembayaran?title=${encodeURIComponent(act.title)}&price=${encodeURIComponent(act.price)}&date=${encodeURIComponent(act.date)}&img=${encodeURIComponent(act.img)}&desc=${encodeURIComponent(act.desc)}&type=${encodeURIComponent(act.type)}`}
+                        href={`/dashboard/pembayaran?title=${encodeURIComponent(act.title)}&activityId=${encodeURIComponent(act.id || "")}`}
                         className="px-8 py-3 bg-primary text-on-primary rounded-xl font-bold hover:brightness-110 shadow-md active:scale-95 transition-all text-center cursor-pointer"
                       >
                         {act.status}
