@@ -2,6 +2,12 @@
 
 import { useEffect, useState, Fragment } from "react";
 import { useRouter } from "next/navigation";
+import {
+  BeritaAcaraItem,
+  BeasiswaItem,
+  INITIAL_BERITA_ACARA,
+  INITIAL_INFO_BEASISWA,
+} from "@/data/portalData";
 
 const formatToIndonesianDate = (dateStr: string) => {
   if (!dateStr) return "";
@@ -222,7 +228,7 @@ interface KipkDocument {
 export default function AdminDashboard() {
   const router = useRouter();
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState<"beranda" | "kegiatan" | "antrean_kip" | "berkas_kipk" | "pengguna" | "sertifikat" | "validasi_sertifikat" | "bobot">("beranda");
+  const [activeTab, setActiveTab] = useState<"beranda" | "kegiatan" | "antrean_kip" | "berkas_kipk" | "berita_acara" | "info_beasiswa" | "pengguna" | "sertifikat" | "validasi_sertifikat" | "bobot">("beranda");
 
   // State arrays
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -230,6 +236,52 @@ export default function AdminDashboard() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [kipkDocs, setKipkDocs] = useState<KipkDocument[]>([]);
+  const [beritaAcaraList, setBeritaAcaraList] = useState<BeritaAcaraItem[]>([]);
+  const [beasiswaList, setBeasiswaList] = useState<BeasiswaItem[]>([]);
+
+  // Berita Acara Management States
+  const [baSearchQuery, setBaSearchQuery] = useState("");
+  const [baStatusFilter, setBaStatusFilter] = useState<"Semua" | "Selesai" | "Akan Datang">("Semua");
+  const [baCategoryFilter, setBaCategoryFilter] = useState<string>("Semua");
+  const [showBeritaAcaraModal, setShowBeritaAcaraModal] = useState(false);
+  const [currentBeritaAcara, setCurrentBeritaAcara] = useState<BeritaAcaraItem | null>(null);
+  const [baFormTitle, setBaFormTitle] = useState("");
+  const [baFormCategory, setBaFormCategory] = useState<BeritaAcaraItem["category"]>("Rapat Kerja");
+  const [baFormStatus, setBaFormStatus] = useState<"Selesai" | "Akan Datang">("Selesai");
+  const [baFormDate, setBaFormDate] = useState("");
+  const [baFormTime, setBaFormTime] = useState("");
+  const [baFormLocation, setBaFormLocation] = useState("");
+  const [baFormOrganizer, setBaFormOrganizer] = useState("Biro Kemahasiswaan & SEMADIKSI UNUSA");
+  const [baFormAttendeeCount, setBaFormAttendeeCount] = useState<number>(100);
+  const [baFormSummary, setBaFormSummary] = useState("");
+  const [baFormContent, setBaFormContent] = useState("");
+  const [baFormBannerImg, setBaFormBannerImg] = useState("");
+  const [baFormAttachmentFileName, setBaFormAttachmentFileName] = useState("");
+  const [baFormExternalLink, setBaFormExternalLink] = useState("");
+  const [showBeritaAcaraDetailModal, setShowBeritaAcaraDetailModal] = useState(false);
+  const [selectedBeritaAcaraForDetail, setSelectedBeritaAcaraForDetail] = useState<BeritaAcaraItem | null>(null);
+
+  // Info Beasiswa Management States
+  const [beaSearchQuery, setBeaSearchQuery] = useState("");
+  const [beaStatusFilter, setBeaStatusFilter] = useState<"Semua" | "Dibuka" | "Segera Dibuka" | "Ditutup">("Semua");
+  const [beaCategoryFilter, setBeaCategoryFilter] = useState<string>("Semua");
+  const [showBeasiswaModal, setShowBeasiswaModal] = useState(false);
+  const [currentBeasiswa, setCurrentBeasiswa] = useState<BeasiswaItem | null>(null);
+  const [beaFormTitle, setBeaFormTitle] = useState("");
+  const [beaFormProvider, setBeaFormProvider] = useState("");
+  const [beaFormCategory, setBeaFormCategory] = useState<BeasiswaItem["category"]>("KIP Kuliah");
+  const [beaFormStatus, setBeaFormStatus] = useState<"Dibuka" | "Segera Dibuka" | "Ditutup">("Dibuka");
+  const [beaFormOpenDate, setBeaFormOpenDate] = useState("");
+  const [beaFormCloseDate, setBeaFormCloseDate] = useState("");
+  const [beaFormCoverage, setBeaFormCoverage] = useState("");
+  const [beaFormRequirements, setBeaFormRequirements] = useState("");
+  const [beaFormSelectionStages, setBeaFormSelectionStages] = useState("");
+  const [beaFormDescription, setBeaFormDescription] = useState("");
+  const [beaFormBannerImg, setBeaFormBannerImg] = useState("");
+  const [beaFormGuideFileName, setBeaFormGuideFileName] = useState("");
+  const [beaFormApplyUrl, setBeaFormApplyUrl] = useState("");
+  const [showBeasiswaDetailModal, setShowBeasiswaDetailModal] = useState(false);
+  const [selectedBeasiswaForDetail, setSelectedBeasiswaForDetail] = useState<BeasiswaItem | null>(null);
 
   // KIP-K Documents Management filters
   const [docSearchQuery, setDocSearchQuery] = useState("");
@@ -428,6 +480,34 @@ export default function AdminDashboard() {
       localStorage.setItem("semadiksi_category_weights", JSON.stringify(defaultWeights));
     }
 
+    // Load Berita Acara list
+    const storedBA = localStorage.getItem("semadiksi_berita_acara");
+    if (storedBA) {
+      try {
+        setBeritaAcaraList(JSON.parse(storedBA));
+      } catch (e) {
+        setBeritaAcaraList(INITIAL_BERITA_ACARA);
+        localStorage.setItem("semadiksi_berita_acara", JSON.stringify(INITIAL_BERITA_ACARA));
+      }
+    } else {
+      setBeritaAcaraList(INITIAL_BERITA_ACARA);
+      localStorage.setItem("semadiksi_berita_acara", JSON.stringify(INITIAL_BERITA_ACARA));
+    }
+
+    // Load Info Beasiswa list
+    const storedBea = localStorage.getItem("semadiksi_info_beasiswa");
+    if (storedBea) {
+      try {
+        setBeasiswaList(JSON.parse(storedBea));
+      } catch (e) {
+        setBeasiswaList(INITIAL_INFO_BEASISWA);
+        localStorage.setItem("semadiksi_info_beasiswa", JSON.stringify(INITIAL_INFO_BEASISWA));
+      }
+    } else {
+      setBeasiswaList(INITIAL_INFO_BEASISWA);
+      localStorage.setItem("semadiksi_info_beasiswa", JSON.stringify(INITIAL_INFO_BEASISWA));
+    }
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "semadiksi_submissions") {
         if (e.newValue) {
@@ -440,6 +520,20 @@ export default function AdminDashboard() {
         if (e.newValue) {
           try {
             setKipkDocs(JSON.parse(e.newValue));
+          } catch (err) { }
+        }
+      }
+      if (e.key === "semadiksi_berita_acara") {
+        if (e.newValue) {
+          try {
+            setBeritaAcaraList(JSON.parse(e.newValue));
+          } catch (err) { }
+        }
+      }
+      if (e.key === "semadiksi_info_beasiswa") {
+        if (e.newValue) {
+          try {
+            setBeasiswaList(JSON.parse(e.newValue));
           } catch (err) { }
         }
       }
@@ -1117,6 +1211,298 @@ export default function AdminDashboard() {
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", `Rekap_Berkas_KIPK_UNUSA_${new Date().toISOString().slice(0, 10)}.xls`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- CRUD BERITA ACARA KEGIATAN LOGIC ---
+  const openCreateBeritaAcaraModal = () => {
+    setCurrentBeritaAcara(null);
+    setBaFormTitle("");
+    setBaFormCategory("Rapat Kerja");
+    setBaFormStatus("Selesai");
+    setBaFormDate(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }));
+    setBaFormTime("09:00 - 15:00 WIB");
+    setBaFormLocation("Kampus B UNUSA Jemursari");
+    setBaFormOrganizer("Pengurus SEMADIKSI & Kemahasiswaan UNUSA");
+    setBaFormAttendeeCount(100);
+    setBaFormSummary("");
+    setBaFormContent("");
+    setBaFormBannerImg("https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80");
+    setBaFormAttachmentFileName("Berita_Acara_Kegiatan.pdf");
+    setBaFormExternalLink("");
+    setShowBeritaAcaraModal(true);
+  };
+
+  const openEditBeritaAcaraModal = (ba: BeritaAcaraItem) => {
+    setCurrentBeritaAcara(ba);
+    setBaFormTitle(ba.title);
+    setBaFormCategory(ba.category);
+    setBaFormStatus(ba.status);
+    setBaFormDate(ba.date);
+    setBaFormTime(ba.time || "");
+    setBaFormLocation(ba.location);
+    setBaFormOrganizer(ba.organizer);
+    setBaFormAttendeeCount(ba.attendeeCount || 0);
+    setBaFormSummary(ba.summary);
+    setBaFormContent(ba.content);
+    setBaFormBannerImg(ba.bannerImg);
+    setBaFormAttachmentFileName(ba.attachmentFileName || "");
+    setBaFormExternalLink(ba.externalLink || "");
+    setShowBeritaAcaraModal(true);
+  };
+
+  const closeBeritaAcaraModal = () => {
+    setShowBeritaAcaraModal(false);
+    setCurrentBeritaAcara(null);
+  };
+
+  const handleSaveBeritaAcara = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!baFormTitle || !baFormSummary) {
+      alert("Harap isi judul dan ringkasan berita acara!");
+      return;
+    }
+
+    const item: BeritaAcaraItem = {
+      id: currentBeritaAcara ? currentBeritaAcara.id : `ba-${Date.now()}`,
+      title: baFormTitle,
+      category: baFormCategory,
+      status: baFormStatus,
+      date: baFormDate || new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+      time: baFormTime,
+      location: baFormLocation || "Kampus UNUSA",
+      organizer: baFormOrganizer || "SEMADIKSI UNUSA",
+      attendeeCount: Number(baFormAttendeeCount) || 0,
+      summary: baFormSummary,
+      content: baFormContent || baFormSummary,
+      bannerImg: baFormBannerImg || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80",
+      attachmentFileName: baFormAttachmentFileName || "Berita_Acara.pdf",
+      attachmentFileSize: "2.0 MB",
+      externalLink: baFormExternalLink,
+      createdAt: currentBeritaAcara ? currentBeritaAcara.createdAt : new Date().toISOString().slice(0, 16).replace("T", " "),
+      author: "Admin Kemahasiswaan"
+    };
+
+    let updated: BeritaAcaraItem[];
+    if (currentBeritaAcara) {
+      updated = beritaAcaraList.map(b => b.id === currentBeritaAcara.id ? item : b);
+    } else {
+      updated = [item, ...beritaAcaraList];
+    }
+
+    setBeritaAcaraList(updated);
+    localStorage.setItem("semadiksi_berita_acara", JSON.stringify(updated));
+    closeBeritaAcaraModal();
+    alert(`Berita Acara "${baFormTitle}" berhasil disimpan!`);
+  };
+
+  const handleDeleteBeritaAcara = (id: string, title: string) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus Berita Acara "${title}"?`)) {
+      const updated = beritaAcaraList.filter(b => b.id !== id);
+      setBeritaAcaraList(updated);
+      localStorage.setItem("semadiksi_berita_acara", JSON.stringify(updated));
+      alert("Berita Acara berhasil dihapus.");
+    }
+  };
+
+  const exportBeritaAcaraToExcel = () => {
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<style>
+  table { border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; width: 100%; }
+  th { background-color: #1B6D24; color: #FFFFFF; font-weight: bold; text-align: center; padding: 8px; border: 1px solid #14521B; }
+  td { padding: 6px 10px; border: 1px solid #D0D0D0; }
+  .title-header { background-color: #E8F5E9; font-size: 13pt; font-weight: bold; color: #1B6D24; text-align: center; padding: 10px; }
+  .center { text-align: center; }
+</style>
+</head>
+<body>
+<table>
+  <tr><td colSpan="8" class="title-header">REKAPITULASI DOKUMEN BERITA ACARA KEGIATAN KIP-K UNUSA</td></tr>
+  <thead>
+    <tr>
+      <th>NO</th>
+      <th>JUDUL BERITA ACARA</th>
+      <th>KATEGORI</th>
+      <th>STATUS</th>
+      <th>TANGGAL & WAKTU</th>
+      <th>LOKASI</th>
+      <th>PENYELENGGARA</th>
+      <th>PESERTA</th>
+    </tr>
+  </thead>
+  <tbody>`;
+    beritaAcaraList.forEach((ba, idx) => {
+      html += `
+    <tr>
+      <td class="center">${idx + 1}</td>
+      <td><b>${ba.title}</b></td>
+      <td>${ba.category}</td>
+      <td class="center">${ba.status}</td>
+      <td>${ba.date} ${ba.time ? `(${ba.time})` : ""}</td>
+      <td>${ba.location}</td>
+      <td>${ba.organizer}</td>
+      <td class="center">${ba.attendeeCount || 0}</td>
+    </tr>`;
+    });
+    html += `</tbody></table></body></html>`;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Berita_Acara_KIPK_${new Date().toISOString().slice(0, 10)}.xls`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- CRUD INFO BEASISWA LOGIC ---
+  const openCreateBeasiswaModal = () => {
+    setCurrentBeasiswa(null);
+    setBeaFormTitle("");
+    setBeaFormProvider("Biro Kemahasiswaan UNUSA");
+    setBeaFormCategory("KIP Kuliah");
+    setBeaFormStatus("Dibuka");
+    setBeaFormOpenDate(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }));
+    setBeaFormCloseDate("30 November 2026");
+    setBeaFormCoverage("Bebas Biaya UKT 100% + Bantuan Biaya Hidup");
+    setBeaFormRequirements("Mahasiswa aktif UNUSA semester berjalan.\nIPK minimal 3.25.\nMemiliki surat rekomendasi Dekan.");
+    setBeaFormSelectionStages("1. Seleksi Berkas -> 2. Wawancara -> 3. Pengumuman Kelulusan");
+    setBeaFormDescription("");
+    setBeaFormBannerImg("https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80");
+    setBeaFormGuideFileName("Panduan_Pendaftaran_Beasiswa.pdf");
+    setBeaFormApplyUrl("https://unusa.ac.id/beasiswa");
+    setShowBeasiswaModal(true);
+  };
+
+  const openEditBeasiswaModal = (bea: BeasiswaItem) => {
+    setCurrentBeasiswa(bea);
+    setBeaFormTitle(bea.title);
+    setBeaFormProvider(bea.provider);
+    setBeaFormCategory(bea.category);
+    setBeaFormStatus(bea.status);
+    setBeaFormOpenDate(bea.openDate);
+    setBeaFormCloseDate(bea.closeDate);
+    setBeaFormCoverage(bea.coverage);
+    setBeaFormRequirements(Array.isArray(bea.requirements) ? bea.requirements.join("\n") : "");
+    setBeaFormSelectionStages(bea.selectionStages || "");
+    setBeaFormDescription(bea.description);
+    setBeaFormBannerImg(bea.bannerImg);
+    setBeaFormGuideFileName(bea.guideFileName || "");
+    setBeaFormApplyUrl(bea.applyUrl || "");
+    setShowBeasiswaModal(true);
+  };
+
+  const closeBeasiswaModal = () => {
+    setShowBeasiswaModal(false);
+    setCurrentBeasiswa(null);
+  };
+
+  const handleSaveBeasiswa = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!beaFormTitle || !beaFormProvider) {
+      alert("Harap isi nama beasiswa dan instansi penyelenggara!");
+      return;
+    }
+
+    const reqArray = beaFormRequirements
+      .split("\n")
+      .map(r => r.trim())
+      .filter(r => r.length > 0);
+
+    const item: BeasiswaItem = {
+      id: currentBeasiswa ? currentBeasiswa.id : `bea-${Date.now()}`,
+      title: beaFormTitle,
+      provider: beaFormProvider,
+      category: beaFormCategory,
+      status: beaFormStatus,
+      openDate: beaFormOpenDate || "1 Januari 2026",
+      closeDate: beaFormCloseDate || "31 Desember 2026",
+      coverage: beaFormCoverage || "Bantuan Biaya Pendidikan",
+      requirements: reqArray.length > 0 ? reqArray : ["Mahasiswa aktif UNUSA", "IPK minimal 3.00"],
+      selectionStages: beaFormSelectionStages || "Seleksi Berkas dan Wawancara",
+      description: beaFormDescription || beaFormTitle,
+      bannerImg: beaFormBannerImg || "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
+      guideFileName: beaFormGuideFileName || "Panduan_Beasiswa.pdf",
+      guideFileSize: "2.5 MB",
+      applyUrl: beaFormApplyUrl || "https://unusa.ac.id/beasiswa",
+      createdAt: currentBeasiswa ? currentBeasiswa.createdAt : new Date().toISOString().slice(0, 16).replace("T", " ")
+    };
+
+    let updated: BeasiswaItem[];
+    if (currentBeasiswa) {
+      updated = beasiswaList.map(b => b.id === currentBeasiswa.id ? item : b);
+    } else {
+      updated = [item, ...beasiswaList];
+    }
+
+    setBeasiswaList(updated);
+    localStorage.setItem("semadiksi_info_beasiswa", JSON.stringify(updated));
+    closeBeasiswaModal();
+    alert(`Info Beasiswa "${beaFormTitle}" berhasil disimpan!`);
+  };
+
+  const handleDeleteBeasiswa = (id: string, title: string) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus program beasiswa "${title}"?`)) {
+      const updated = beasiswaList.filter(b => b.id !== id);
+      setBeasiswaList(updated);
+      localStorage.setItem("semadiksi_info_beasiswa", JSON.stringify(updated));
+      alert("Info Beasiswa berhasil dihapus.");
+    }
+  };
+
+  const exportBeasiswaToExcel = () => {
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<style>
+  table { border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; width: 100%; }
+  th { background-color: #1B6D24; color: #FFFFFF; font-weight: bold; text-align: center; padding: 8px; border: 1px solid #14521B; }
+  td { padding: 6px 10px; border: 1px solid #D0D0D0; }
+  .title-header { background-color: #E8F5E9; font-size: 13pt; font-weight: bold; color: #1B6D24; text-align: center; padding: 10px; }
+  .center { text-align: center; }
+</style>
+</head>
+<body>
+<table>
+  <tr><td colSpan="7" class="title-header">DAFTAR INFORMASI PROGRAM BEASISWA - SEMADIKSI UNUSA</td></tr>
+  <thead>
+    <tr>
+      <th>NO</th>
+      <th>NAMA BEASISWA</th>
+      <th>INSTANSI / PENYELENGGARA</th>
+      <th>KATEGORI</th>
+      <th>STATUS</th>
+      <th>PERIODE PENDAFTARAN</th>
+      <th>CAKUPAN PEMBIAYAAN</th>
+    </tr>
+  </thead>
+  <tbody>`;
+    beasiswaList.forEach((bea, idx) => {
+      html += `
+    <tr>
+      <td class="center">${idx + 1}</td>
+      <td><b>${bea.title}</b></td>
+      <td>${bea.provider}</td>
+      <td>${bea.category}</td>
+      <td class="center">${bea.status}</td>
+      <td>${bea.openDate} s.d. ${bea.closeDate}</td>
+      <td>${bea.coverage}</td>
+    </tr>`;
+    });
+    html += `</tbody></table></body></html>`;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Info_Beasiswa_UNUSA_${new Date().toISOString().slice(0, 10)}.xls`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -2052,12 +2438,14 @@ export default function AdminDashboard() {
       <div className="flex flex-1 relative">
         {/* Navigation Drawer */}
         <aside className="h-screen w-64 fixed left-0 top-0 bg-surface shadow-md z-30 pt-20 flex flex-col justify-between border-r border-surface-variant/20 hidden lg:flex">
-          <nav className="flex flex-col gap-1 px-2">
+          <nav className="flex flex-col gap-1 px-2 overflow-y-auto">
             {[
               { id: "beranda", label: "Beranda", icon: "dashboard" },
               { id: "kegiatan", label: "CRUD Kegiatan", icon: "event_note" },
               { id: "antrean_kip", label: "Antrean KIP-K", icon: "assignment_turned_in" },
               { id: "berkas_kipk", label: "Berkas KIP-K", icon: "folder_shared" },
+              { id: "berita_acara", label: "Berita Acara", icon: "newspaper" },
+              { id: "info_beasiswa", label: "Info Beasiswa", icon: "school" },
               { id: "pengguna", label: "Kelola Pengguna", icon: "group_add" },
               { id: "sertifikat", label: "Upload Sertifikat", icon: "upload_file" },
               { id: "validasi_sertifikat", label: "Validasi Sertifikat", icon: "qr_code_scanner" },
@@ -2066,17 +2454,17 @@ export default function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-3 flex items-center gap-4 rounded-full transition-all active:scale-98 duration-150 cursor-pointer text-left ${activeTab === tab.id
-                  ? "bg-primary text-white font-bold"
+                className={`px-4 py-2.5 flex items-center gap-3.5 rounded-full transition-all active:scale-98 duration-150 cursor-pointer text-left ${activeTab === tab.id
+                  ? "bg-primary text-white font-bold shadow-xs"
                   : "text-on-surface-variant hover:bg-surface-container-high"
                   }`}
               >
-                <span className="material-symbols-outlined">{tab.icon}</span>
-                <span className="font-label-md text-label-md">{tab.label}</span>
+                <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
+                <span className="font-label-md text-xs">{tab.label}</span>
               </button>
             ))}
           </nav>
-          <div className="p-4 border-t border-surface-variant/30 text-center text-[10px] text-outline">
+          <div className="p-3 border-t border-surface-variant/30 text-center text-[10px] text-outline">
             SEMADIKSI Admin Panel v1.0
           </div>
         </aside>
@@ -2089,7 +2477,9 @@ export default function AdminDashboard() {
               { id: "beranda", label: "Beranda", icon: "dashboard" },
               { id: "kegiatan", label: "Kegiatan", icon: "event_note" },
               { id: "antrean_kip", label: "Antrean", icon: "assignment_turned_in" },
-              { id: "berkas_kipk", label: "Berkas KIP", icon: "folder_shared" },
+              { id: "berkas_kipk", label: "Berkas", icon: "folder_shared" },
+              { id: "berita_acara", label: "Berita Acara", icon: "newspaper" },
+              { id: "info_beasiswa", label: "Beasiswa", icon: "school" },
               { id: "pengguna", label: "Pengguna", icon: "group_add" },
               { id: "sertifikat", label: "Sertifikat", icon: "upload_file" },
               { id: "validasi_sertifikat", label: "Validasi", icon: "qr_code_scanner" },
@@ -2098,12 +2488,12 @@ export default function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2 flex items-center gap-2 rounded-full text-xs font-bold whitespace-nowrap cursor-pointer ${activeTab === tab.id
-                  ? "bg-primary text-white"
+                className={`px-3 py-1.5 flex items-center gap-1.5 rounded-full text-xs font-bold whitespace-nowrap cursor-pointer ${activeTab === tab.id
+                  ? "bg-primary text-white shadow-xs"
                   : "bg-surface-container-high text-on-surface-variant"
                   }`}
               >
-                <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+                <span className="material-symbols-outlined text-[15px]">{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -3346,6 +3736,613 @@ export default function AdminDashboard() {
                     </table>
                   );
                 })()}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2.6: BERITA ACARA KEGIATAN */}
+          {activeTab === "berita_acara" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header & Main Actions */}
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div>
+                  <h2 className="font-display text-2xl font-extrabold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-3xl">newspaper</span>
+                    <span>Berita Acara & Publikasi Kegiatan</span>
+                  </h2>
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Kelola arsip berita acara resmi, notulensi kegiatan selesai, dan publikasi agenda kegiatan mahasiswa KIP-K UNUSA.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={openCreateBeritaAcaraModal}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-primary text-on-primary hover:brightness-110 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                    <span>Upload Berita Acara Baru</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={exportBeritaAcaraToExcel}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white text-xs font-bold rounded-xl shadow transition-all active:scale-95 cursor-pointer"
+                    title="Ekspor Rekapitulasi Berita Acara ke file Excel (.xls)"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Ekspor Excel (.xls)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Statistics Overview Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <span className="material-symbols-outlined text-2xl">newspaper</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Total Publikasi</p>
+                    <h3 className="text-lg font-black text-on-surface mt-0.5">{beritaAcaraList.length} Berita/Agenda</h3>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+                    <span className="material-symbols-outlined text-2xl">check_circle</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Kegiatan Selesai</p>
+                    <h3 className="text-lg font-black text-emerald-600 mt-0.5">
+                      {beritaAcaraList.filter(b => b.status === "Selesai").length} Dokumen
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+                    <span className="material-symbols-outlined text-2xl">event_upcoming</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Agenda Mendatang</p>
+                    <h3 className="text-lg font-black text-amber-600 mt-0.5">
+                      {beritaAcaraList.filter(b => b.status === "Akan Datang").length} Kegiatan
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shrink-0">
+                    <span className="material-symbols-outlined text-2xl">groups</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Peserta Terlibat</p>
+                    <h3 className="text-lg font-black text-indigo-600 mt-0.5">
+                      {beritaAcaraList.reduce((acc, curr) => acc + (curr.attendeeCount || 0), 0)} Orang
+                    </h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
+                <div className="relative flex-1">
+                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Cari judul berita acara, lokasi, topik, atau penyelenggara..."
+                    value={baSearchQuery}
+                    onChange={(e) => setBaSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-on-surface"
+                  />
+                  {baSearchQuery && (
+                    <button
+                      onClick={() => setBaSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={baCategoryFilter}
+                    onChange={(e) => setBaCategoryFilter(e.target.value)}
+                    className="px-3 py-2.5 bg-surface-container border border-surface-variant/20 rounded-xl text-xs font-bold text-on-surface outline-none cursor-pointer"
+                  >
+                    <option value="Semua">📁 Semua Kategori</option>
+                    <option value="Rapat Kerja">Rapat Kerja</option>
+                    <option value="Sosialisasi KIP-K">Sosialisasi KIP-K</option>
+                    <option value="Pelatihan">Pelatihan</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Seminar">Seminar</option>
+                    <option value="Lomba">Lomba & Kompetisi</option>
+                    <option value="Pengabdian Masyarakat">Pengabdian Masyarakat</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+
+                  <div className="flex gap-1 bg-surface-container p-1 rounded-xl text-xs font-bold">
+                    {(["Semua", "Selesai", "Akan Datang"] as const).map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => setBaStatusFilter(st)}
+                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] ${
+                          baStatusFilter === st
+                            ? "bg-primary text-white shadow-sm font-bold"
+                            : "text-on-surface-variant hover:bg-surface-variant/20"
+                        }`}
+                      >
+                        {st === "Selesai" ? "✅ Selesai" : st === "Akan Datang" ? "📅 Akan Datang" : "Semua"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Table of Berita Acara */}
+              <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-surface-container-low border-b border-surface-variant/30 text-on-surface-variant font-bold text-xs uppercase">
+                      <th className="p-4 w-12 text-center">No</th>
+                      <th className="p-4">Judul Berita Acara & Ringkasan</th>
+                      <th className="p-4 w-36">Kategori</th>
+                      <th className="p-4 w-36 text-center">Status</th>
+                      <th className="p-4 w-48">Waktu & Tempat</th>
+                      <th className="p-4 w-28 text-center">Peserta</th>
+                      <th className="p-4 w-44">Lampiran PDF</th>
+                      <th className="p-4 w-36 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-variant/20 text-xs">
+                    {(() => {
+                      const filtered = beritaAcaraList.filter((item) => {
+                        if (baStatusFilter !== "Semua" && item.status !== baStatusFilter) return false;
+                        if (baCategoryFilter !== "Semua" && item.category !== baCategoryFilter) return false;
+                        if (baSearchQuery.trim() !== "") {
+                          const q = baSearchQuery.toLowerCase();
+                          return (
+                            item.title.toLowerCase().includes(q) ||
+                            item.summary.toLowerCase().includes(q) ||
+                            item.location.toLowerCase().includes(q) ||
+                            item.organizer.toLowerCase().includes(q)
+                          );
+                        }
+                        return true;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={8} className="text-center py-12 text-outline">
+                              <span className="material-symbols-outlined text-4xl block mb-2 text-outline/40">newspaper</span>
+                              <p className="font-bold text-sm text-on-surface">Tidak ada berita acara yang cocok dengan filter atau pencarian.</p>
+                              <p className="text-xs text-outline mt-0.5">Gunakan tombol "Upload Berita Acara Baru" di atas untuk menambahkan dokumen.</p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filtered.map((item, idx) => {
+                        const isSelesai = item.status === "Selesai";
+
+                        return (
+                          <tr key={item.id} className="hover:bg-surface-container-low/40 transition-colors">
+                            <td className="p-4 text-center font-bold text-outline">{idx + 1}</td>
+
+                            {/* Title & Summary */}
+                            <td className="p-4">
+                              <div className="space-y-1">
+                                <p className="font-bold text-on-surface text-sm">{item.title}</p>
+                                <p className="text-[11px] text-on-surface-variant line-clamp-2">{item.summary}</p>
+                                <p className="text-[10px] text-outline">Penyelenggara: <strong>{item.organizer}</strong></p>
+                              </div>
+                            </td>
+
+                            {/* Category */}
+                            <td className="p-4">
+                              <span className="px-2.5 py-1 bg-surface-container text-on-surface border border-surface-variant/30 rounded-full text-[10px] font-bold">
+                                {item.category}
+                              </span>
+                            </td>
+
+                            {/* Status */}
+                            <td className="p-4 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                isSelesai
+                                  ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                                  : "bg-amber-500/10 text-amber-700 border-amber-500/20"
+                              }`}>
+                                <span className="material-symbols-outlined text-[12px]">
+                                  {isSelesai ? "check_circle" : "event"}
+                                </span>
+                                <span>{isSelesai ? "Selesai" : "Akan Datang"}</span>
+                              </span>
+                            </td>
+
+                            {/* Date & Location */}
+                            <td className="p-4 text-[11px] text-on-surface-variant">
+                              <p className="font-semibold text-on-surface">{item.date}</p>
+                              {item.time && <p className="text-outline">{item.time}</p>}
+                              <p className="text-[10px] text-outline truncate">{item.location}</p>
+                            </td>
+
+                            {/* Attendee count */}
+                            <td className="p-4 text-center">
+                              <span className="font-extrabold text-xs text-primary">
+                                {item.attendeeCount || 0}
+                              </span>
+                              <span className="text-[10px] text-outline block">Orang</span>
+                            </td>
+
+                            {/* Attachment */}
+                            <td className="p-4">
+                              {item.attachmentFileName ? (
+                                <button
+                                  type="button"
+                                  onClick={() => alert(`Mengunduh berkas: ${item.attachmentFileName}`)}
+                                  className="flex items-center gap-1.5 text-primary hover:underline font-bold text-xs truncate max-w-[160px] cursor-pointer"
+                                  title={item.attachmentFileName}
+                                >
+                                  <span className="material-symbols-outlined text-[16px] shrink-0">picture_as_pdf</span>
+                                  <span className="truncate">{item.attachmentFileName}</span>
+                                </button>
+                              ) : (
+                                <span className="text-outline italic text-[11px]">-</span>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="p-4 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedBeritaAcaraForDetail(item);
+                                    setShowBeritaAcaraDetailModal(true);
+                                  }}
+                                  className="p-1.5 hover:bg-primary/10 text-primary rounded-lg transition-colors cursor-pointer"
+                                  title="Pratinjau Berita Acara Lengkap"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => openEditBeritaAcaraModal(item)}
+                                  className="p-1.5 hover:bg-surface-variant/30 text-on-surface-variant rounded-lg transition-colors cursor-pointer"
+                                  title="Edit Berita Acara"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteBeritaAcara(item.id, item.title)}
+                                  className="p-1.5 hover:bg-error-container/20 text-error rounded-lg transition-colors cursor-pointer"
+                                  title="Hapus Berita Acara"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2.7: INFO BEASISWA */}
+          {activeTab === "info_beasiswa" && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header & Main Actions */}
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div>
+                  <h2 className="font-display text-2xl font-extrabold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-3xl">school</span>
+                    <span>Manajemen & Publikasi Info Beasiswa</span>
+                  </h2>
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Kelola pengumuman beasiswa KIP Kuliah, beasiswa prestasi UNUSA, beasiswa kemitraan industri & perbankan, serta bantuan pembiayaan studi.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={openCreateBeasiswaModal}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-primary text-on-primary hover:brightness-110 rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                    <span>Upload Info Beasiswa Baru</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={exportBeasiswaToExcel}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white text-xs font-bold rounded-xl shadow transition-all active:scale-95 cursor-pointer"
+                    title="Ekspor Rekapitulasi Beasiswa ke file Excel (.xls)"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Ekspor Excel (.xls)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Statistics Overview Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <span className="material-symbols-outlined text-2xl">school</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Total Program</p>
+                    <h3 className="text-lg font-black text-on-surface mt-0.5">{beasiswaList.length} Program</h3>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+                    <span className="material-symbols-outlined text-2xl">check_circle</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Sedang Dibuka</p>
+                    <h3 className="text-lg font-black text-emerald-600 mt-0.5">
+                      {beasiswaList.filter(b => b.status === "Dibuka").length} Program
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+                    <span className="material-symbols-outlined text-2xl">timelapse</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Segera Dibuka</p>
+                    <h3 className="text-lg font-black text-amber-600 mt-0.5">
+                      {beasiswaList.filter(b => b.status === "Segera Dibuka").length} Program
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center text-error shrink-0">
+                    <span className="material-symbols-outlined text-2xl">cancel</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Telah Ditutup</p>
+                    <h3 className="text-lg font-black text-error mt-0.5">
+                      {beasiswaList.filter(b => b.status === "Ditutup").length} Program
+                    </h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
+                <div className="relative flex-1">
+                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Cari nama beasiswa, instansi penyedia, atau cakupan biaya..."
+                    value={beaSearchQuery}
+                    onChange={(e) => setBeaSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-on-surface"
+                  />
+                  {beaSearchQuery && (
+                    <button
+                      onClick={() => setBeaSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={beaCategoryFilter}
+                    onChange={(e) => setBeaCategoryFilter(e.target.value)}
+                    className="px-3 py-2.5 bg-surface-container border border-surface-variant/20 rounded-xl text-xs font-bold text-on-surface outline-none cursor-pointer"
+                  >
+                    <option value="Semua">📁 Semua Kategori</option>
+                    <option value="KIP Kuliah">KIP Kuliah</option>
+                    <option value="Prestasi Akademik">Prestasi Akademik</option>
+                    <option value="Prestasi Non-Akademik">Prestasi Non-Akademik</option>
+                    <option value="Bantuan UKT / Biaya Hidup">Bantuan UKT / Biaya Hidup</option>
+                    <option value="Beasiswa Swasta / BUMN">Beasiswa Swasta / BUMN</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+
+                  <div className="flex gap-1 bg-surface-container p-1 rounded-xl text-xs font-bold">
+                    {(["Semua", "Dibuka", "Segera Dibuka", "Ditutup"] as const).map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => setBeaStatusFilter(st)}
+                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] ${
+                          beaStatusFilter === st
+                            ? "bg-primary text-white shadow-sm font-bold"
+                            : "text-on-surface-variant hover:bg-surface-variant/20"
+                        }`}
+                      >
+                        {st === "Dibuka" ? "🟢 Dibuka" : st === "Segera Dibuka" ? "🟡 Segera" : st === "Ditutup" ? "🔴 Tutup" : "Semua"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Table of Scholarships */}
+              <div className="bg-surface-container-lowest border border-surface-variant/30 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-surface-container-low border-b border-surface-variant/30 text-on-surface-variant font-bold text-xs uppercase">
+                      <th className="p-4 w-12 text-center">No</th>
+                      <th className="p-4">Nama Beasiswa & Instansi</th>
+                      <th className="p-4 w-40">Kategori</th>
+                      <th className="p-4 w-32 text-center">Status</th>
+                      <th className="p-4 w-52">Periode Pendaftaran</th>
+                      <th className="p-4">Cakupan Pembiayaan</th>
+                      <th className="p-4 w-40">Buku Panduan / Link</th>
+                      <th className="p-4 w-36 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-variant/20 text-xs">
+                    {(() => {
+                      const filtered = beasiswaList.filter((item) => {
+                        if (beaStatusFilter !== "Semua" && item.status !== beaStatusFilter) return false;
+                        if (beaCategoryFilter !== "Semua" && item.category !== beaCategoryFilter) return false;
+                        if (beaSearchQuery.trim() !== "") {
+                          const q = beaSearchQuery.toLowerCase();
+                          return (
+                            item.title.toLowerCase().includes(q) ||
+                            item.provider.toLowerCase().includes(q) ||
+                            item.coverage.toLowerCase().includes(q) ||
+                            item.description.toLowerCase().includes(q)
+                          );
+                        }
+                        return true;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={8} className="text-center py-12 text-outline">
+                              <span className="material-symbols-outlined text-4xl block mb-2 text-outline/40">school</span>
+                              <p className="font-bold text-sm text-on-surface">Tidak ada program beasiswa yang cocok dengan filter atau pencarian.</p>
+                              <p className="text-xs text-outline mt-0.5">Gunakan tombol "Upload Info Beasiswa Baru" di atas untuk menambahkan data.</p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filtered.map((item, idx) => {
+                        const isDibuka = item.status === "Dibuka";
+                        const isSegera = item.status === "Segera Dibuka";
+
+                        return (
+                          <tr key={item.id} className="hover:bg-surface-container-low/40 transition-colors">
+                            <td className="p-4 text-center font-bold text-outline">{idx + 1}</td>
+
+                            {/* Title & Provider */}
+                            <td className="p-4">
+                              <div className="space-y-0.5">
+                                <p className="font-bold text-on-surface text-sm">{item.title}</p>
+                                <p className="text-[11px] text-primary font-semibold">{item.provider}</p>
+                              </div>
+                            </td>
+
+                            {/* Category */}
+                            <td className="p-4">
+                              <span className="px-2.5 py-1 bg-surface-container text-on-surface border border-surface-variant/30 rounded-full text-[10px] font-bold">
+                                {item.category}
+                              </span>
+                            </td>
+
+                            {/* Status */}
+                            <td className="p-4 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                isDibuka
+                                  ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                                  : isSegera
+                                    ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
+                                    : "bg-error/10 text-error border-error/20"
+                              }`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                <span>{item.status}</span>
+                              </span>
+                            </td>
+
+                            {/* Period */}
+                            <td className="p-4 text-[11px] text-on-surface-variant">
+                              <p className="font-medium">{item.openDate} s.d.</p>
+                              <p className="font-bold text-on-surface">{item.closeDate}</p>
+                            </td>
+
+                            {/* Coverage */}
+                            <td className="p-4 text-xs font-semibold text-on-surface max-w-[220px]">
+                              <span className="line-clamp-2" title={item.coverage}>{item.coverage}</span>
+                            </td>
+
+                            {/* Guide & Link */}
+                            <td className="p-4 text-xs">
+                              <div className="space-y-1">
+                                {item.guideFileName && (
+                                  <button
+                                    type="button"
+                                    onClick={() => alert(`Mengunduh panduan: ${item.guideFileName}`)}
+                                    className="flex items-center gap-1 text-primary hover:underline font-bold text-[11px] truncate max-w-[150px] cursor-pointer"
+                                    title={item.guideFileName}
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                                    <span className="truncate">{item.guideFileName}</span>
+                                  </button>
+                                )}
+                                {item.applyUrl && (
+                                  <a
+                                    href={item.applyUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-outline hover:text-primary text-[10px] truncate max-w-[150px]"
+                                  >
+                                    <span className="material-symbols-outlined text-[13px]">link</span>
+                                    <span>Web Pendaftaran</span>
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="p-4 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedBeasiswaForDetail(item);
+                                    setShowBeasiswaDetailModal(true);
+                                  }}
+                                  className="p-1.5 hover:bg-primary/10 text-primary rounded-lg transition-colors cursor-pointer"
+                                  title="Lihat Detail Beasiswa"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => openEditBeasiswaModal(item)}
+                                  className="p-1.5 hover:bg-surface-variant/30 text-on-surface-variant rounded-lg transition-colors cursor-pointer"
+                                  title="Edit Info Beasiswa"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteBeasiswa(item.id, item.title)}
+                                  className="p-1.5 hover:bg-error-container/20 text-error rounded-lg transition-colors cursor-pointer"
+                                  title="Hapus Info Beasiswa"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -5785,6 +6782,711 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: FORM UPLOAD & EDIT BERITA ACARA */}
+      {showBeritaAcaraModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+          <div className="bg-surface-container-lowest rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl relative flex flex-col p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-surface-variant/30 mb-6">
+              <div>
+                <h3 className="font-bold text-xl text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">newspaper</span>
+                  <span>{currentBeritaAcara ? "Edit Berita Acara / Agenda" : "Upload Berita Acara / Agenda Baru"}</span>
+                </h3>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  Publikasikan arsip berita acara kegiatan yang selesai atau agenda acara mendatang untuk mahasiswa KIP-K.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeBeritaAcaraModal}
+                className="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-variant/30 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBeritaAcara} className="space-y-4">
+              {/* Title */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant block">Judul Berita Acara / Kegiatan *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Berita Acara Rapat Kerja SEMADIKSI Periode 2026/2027"
+                  value={baFormTitle}
+                  onChange={(e) => setBaFormTitle(e.target.value)}
+                  className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-on-surface"
+                />
+              </div>
+
+              {/* Status & Category Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Status Pelaksanaan *</label>
+                  <select
+                    value={baFormStatus}
+                    onChange={(e) => setBaFormStatus(e.target.value as any)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-bold text-on-surface cursor-pointer"
+                  >
+                    <option value="Selesai">✅ Selesai (Dokumentasi & Berita Acara)</option>
+                    <option value="Akan Datang">📅 Akan Datang (Agenda Acara Mendatang)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Kategori Kegiatan *</label>
+                  <select
+                    value={baFormCategory}
+                    onChange={(e) => setBaFormCategory(e.target.value as any)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-bold text-on-surface cursor-pointer"
+                  >
+                    <option value="Rapat Kerja">Rapat Kerja</option>
+                    <option value="Sosialisasi KIP-K">Sosialisasi KIP-K</option>
+                    <option value="Pelatihan">Pelatihan</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Seminar">Seminar</option>
+                    <option value="Lomba">Lomba & Kompetisi</option>
+                    <option value="Pengabdian Masyarakat">Pengabdian Masyarakat</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Date, Time, Location Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Tanggal Pelaksanaan</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 10 Agustus 2026"
+                    value={baFormDate}
+                    onChange={(e) => setBaFormDate(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Waktu / Jam</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 09:00 - 15:00 WIB"
+                    value={baFormTime}
+                    onChange={(e) => setBaFormTime(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Jumlah Peserta</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Contoh: 120"
+                    value={baFormAttendeeCount === 0 ? "" : baFormAttendeeCount}
+                    onChange={(e) => setBaFormAttendeeCount(Math.max(0, parseInt(e.target.value.replace(/^0+(?=\d)/, "") || "0", 10)))}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+              </div>
+
+              {/* Location & Organizer */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Tempat / Lokasi</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Auditorium Tower Lantai 9 Kampus B UNUSA"
+                    value={baFormLocation}
+                    onChange={(e) => setBaFormLocation(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Penyelenggara Kegiatan</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Biro Kemahasiswaan & SEMADIKSI UNUSA"
+                    value={baFormOrganizer}
+                    onChange={(e) => setBaFormOrganizer(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant block">Ringkasan Berita Acara *</label>
+                <textarea
+                  rows={2}
+                  required
+                  placeholder="Ringkasan poin-poin utama berita acara atau agenda kegiatan..."
+                  value={baFormSummary}
+                  onChange={(e) => setBaFormSummary(e.target.value)}
+                  className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                />
+              </div>
+
+              {/* Full Content */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant block">Isi Notulensi / Berita Acara Lengkap</label>
+                <textarea
+                  rows={4}
+                  placeholder="Uraikan jalannya kegiatan, susunan acara, hasil keputusan rapat, dan notulensi resmi..."
+                  value={baFormContent}
+                  onChange={(e) => setBaFormContent(e.target.value)}
+                  className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                />
+              </div>
+
+              {/* Banner Img, Attachment & External Link */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">URL Gambar Banner</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={baFormBannerImg}
+                    onChange={(e) => setBaFormBannerImg(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Nama File Lampiran (PDF)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Berita_Acara_Raker.pdf"
+                    value={baFormAttachmentFileName}
+                    onChange={(e) => setBaFormAttachmentFileName(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Tautan Eksternal / Drive</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={baFormExternalLink}
+                    onChange={(e) => setBaFormExternalLink(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-surface-variant/30 justify-end">
+                <button
+                  type="button"
+                  onClick={closeBeritaAcaraModal}
+                  className="px-5 py-2.5 border border-surface-variant text-on-surface-variant hover:bg-surface-variant/15 rounded-xl font-bold text-xs cursor-pointer transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-primary text-on-primary hover:brightness-110 active:scale-95 rounded-xl font-bold text-xs cursor-pointer shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Simpan Berita Acara</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: FORM UPLOAD & EDIT INFO BEASISWA */}
+      {showBeasiswaModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+          <div className="bg-surface-container-lowest rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl relative flex flex-col p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-surface-variant/30 mb-6">
+              <div>
+                <h3 className="font-bold text-xl text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">school</span>
+                  <span>{currentBeasiswa ? "Edit Info Beasiswa" : "Upload / Tambah Info Beasiswa Baru"}</span>
+                </h3>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  Publikasikan informasi pembukaan program beasiswa untuk mahasiswa KIP-K dan umum di UNUSA.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeBeasiswaModal}
+                className="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-variant/30 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBeasiswa} className="space-y-4">
+              {/* Title & Provider */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Nama Program Beasiswa *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Beasiswa KIP Kuliah Merdeka Kemendikbudristek 2026"
+                    value={beaFormTitle}
+                    onChange={(e) => setBeaFormTitle(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Instansi / Penyelenggara *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Kemendikbudristek RI & UNUSA"
+                    value={beaFormProvider}
+                    onChange={(e) => setBeaFormProvider(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+              </div>
+
+              {/* Category & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Kategori Beasiswa *</label>
+                  <select
+                    value={beaFormCategory}
+                    onChange={(e) => setBeaFormCategory(e.target.value as any)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-bold text-on-surface cursor-pointer"
+                  >
+                    <option value="KIP Kuliah">KIP Kuliah</option>
+                    <option value="Prestasi Akademik">Prestasi Akademik</option>
+                    <option value="Prestasi Non-Akademik">Prestasi Non-Akademik</option>
+                    <option value="Bantuan UKT / Biaya Hidup">Bantuan UKT / Biaya Hidup</option>
+                    <option value="Beasiswa Swasta / BUMN">Beasiswa Swasta / BUMN</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Status Pendaftaran *</label>
+                  <select
+                    value={beaFormStatus}
+                    onChange={(e) => setBeaFormStatus(e.target.value as any)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-bold text-on-surface cursor-pointer"
+                  >
+                    <option value="Dibuka">🟢 Dibuka (Sedang Berlangsung)</option>
+                    <option value="Segera Dibuka">🟡 Segera Dibuka</option>
+                    <option value="Ditutup">🔴 Ditutup</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Tanggal Buka Pendaftaran</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 1 Juni 2026"
+                    value={beaFormOpenDate}
+                    onChange={(e) => setBeaFormOpenDate(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Tanggal Penutupan (Deadline)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 30 September 2026"
+                    value={beaFormCloseDate}
+                    onChange={(e) => setBeaFormCloseDate(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+              </div>
+
+              {/* Coverage */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant block">Cakupan Pembiayaan & Benefit *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Bebas Biaya UKT 100% 8 Semester + Biaya Hidup Rp 1.400.000/bln"
+                  value={beaFormCoverage}
+                  onChange={(e) => setBeaFormCoverage(e.target.value)}
+                  className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-on-surface"
+                />
+              </div>
+
+              {/* Requirements */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface-variant block">
+                  Persyaratan Pendaftaran (Satu baris per syarat)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder={"Mahasiswa aktif UNUSA semester 2\nIPK minimal 3.25\nMemiliki kartu KIP/KKS"}
+                  value={beaFormRequirements}
+                  onChange={(e) => setBeaFormRequirements(e.target.value)}
+                  className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface font-mono"
+                />
+              </div>
+
+              {/* Selection Stages & Description */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Tahapan / Alur Seleksi</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Contoh: 1. Seleksi Berkas -> 2. Wawancara -> 3. Pengumuman Kelulusan"
+                    value={beaFormSelectionStages}
+                    onChange={(e) => setBeaFormSelectionStages(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Deskripsi Singkat Program</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Uraikan gambaran umum dan tujuan program beasiswa ini..."
+                    value={beaFormDescription}
+                    onChange={(e) => setBeaFormDescription(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+              </div>
+
+              {/* Banner Img, Guide File & Apply URL */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">URL Poster / Banner</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={beaFormBannerImg}
+                    onChange={(e) => setBeaFormBannerImg(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Nama File Panduan (PDF)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Buku_Panduan_KIPK.pdf"
+                    value={beaFormGuideFileName}
+                    onChange={(e) => setBeaFormGuideFileName(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant block">Link Pendaftaran Resmi</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={beaFormApplyUrl}
+                    onChange={(e) => setBeaFormApplyUrl(e.target.value)}
+                    className="w-full p-3 bg-surface-container border border-surface-variant/20 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs text-on-surface"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-surface-variant/30 justify-end">
+                <button
+                  type="button"
+                  onClick={closeBeasiswaModal}
+                  className="px-5 py-2.5 border border-surface-variant text-on-surface-variant hover:bg-surface-variant/15 rounded-xl font-bold text-xs cursor-pointer transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-primary text-on-primary hover:brightness-110 active:scale-95 rounded-xl font-bold text-xs cursor-pointer shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Simpan Info Beasiswa</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DETAIL PRATINJAU BERITA ACARA RESMI (ADMIN) */}
+      {showBeritaAcaraDetailModal && selectedBeritaAcaraForDetail && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+          <div className="bg-surface-container-lowest rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl relative flex flex-col p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-surface-variant/30 mb-5">
+              <div className="flex items-center gap-2">
+                <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-xl">description</span>
+                </span>
+                <div>
+                  <h3 className="font-bold text-lg text-on-surface">Pratinjau Berita Acara Resmi</h3>
+                  <p className="text-xs text-on-surface-variant">ID: {selectedBeritaAcaraForDetail.id} • Diterbitkan oleh {selectedBeritaAcaraForDetail.author}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBeritaAcaraDetailModal(false);
+                  setSelectedBeritaAcaraForDetail(null);
+                }}
+                className="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-variant/30 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">close</span>
+              </button>
+            </div>
+
+            <div className="bg-white border-2 border-stone-300/80 rounded-2xl p-6 md:p-8 shadow-inner space-y-6 text-stone-800 font-sans">
+              <div className="border-b-2 border-stone-800 pb-4 text-center space-y-1">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">U</span>
+                  <span className="font-extrabold text-sm md:text-base tracking-wide text-primary">UNIVERSITAS NAHDLATUL ULAMA SURABAYA</span>
+                </div>
+                <p className="text-xs font-bold tracking-wider text-stone-700 uppercase">SERIKAT MAHASISWA BIDIKMISI & KIP KULIAH (SEMADIKSI) UNUSA</p>
+                <p className="text-[10px] text-stone-500">Sekretariat: Gedung Fastron Lantai 3 Kampus B UNUSA, Jl. Raya Jemursari No. 51-57 Surabaya</p>
+              </div>
+
+              <div className="text-center space-y-1">
+                <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-bold inline-block uppercase tracking-wider">
+                  {selectedBeritaAcaraForDetail.category} • {selectedBeritaAcaraForDetail.status === "Selesai" ? "Laporan Berita Acara" : "Agenda Acara"}
+                </span>
+                <h2 className="font-extrabold text-lg md:text-xl text-stone-900 leading-snug pt-1">
+                  {selectedBeritaAcaraForDetail.title}
+                </h2>
+                <p className="text-xs text-stone-500 font-mono">Pelaksanaan: {selectedBeritaAcaraForDetail.date} {selectedBeritaAcaraForDetail.time ? `(${selectedBeritaAcaraForDetail.time})` : ""}</p>
+              </div>
+
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-xs grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-stone-500 block">Tempat / Lokasi:</span>
+                  <strong className="text-stone-800">{selectedBeritaAcaraForDetail.location}</strong>
+                </div>
+                <div>
+                  <span className="text-stone-500 block">Penyelenggara:</span>
+                  <strong className="text-stone-800">{selectedBeritaAcaraForDetail.organizer}</strong>
+                </div>
+                {selectedBeritaAcaraForDetail.attendeeCount && (
+                  <div>
+                    <span className="text-stone-500 block">Partisipasi / Kehadiran:</span>
+                    <strong className="text-primary font-bold">{selectedBeritaAcaraForDetail.attendeeCount} Peserta</strong>
+                  </div>
+                )}
+                <div>
+                  <span className="text-stone-500 block">Waktu Terbit:</span>
+                  <span className="text-stone-700 font-medium">{selectedBeritaAcaraForDetail.createdAt}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-stone-700 border-b border-stone-300 pb-1">
+                  Uraian Berita Acara & Rangkuman Kegiatan:
+                </h4>
+                <div className="text-xs text-stone-700 leading-relaxed whitespace-pre-line space-y-2 pt-1">
+                  {selectedBeritaAcaraForDetail.content}
+                </div>
+              </div>
+
+              {selectedBeritaAcaraForDetail.attachmentFileName && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-primary text-2xl">picture_as_pdf</span>
+                    <div>
+                      <p className="font-bold text-xs text-stone-800">{selectedBeritaAcaraForDetail.attachmentFileName}</p>
+                      <p className="text-[10px] text-stone-500">Lampiran Resmi Berita Acara • {selectedBeritaAcaraForDetail.attachmentFileSize || "2.0 MB"}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => alert(`Mengunduh dokumen: ${selectedBeritaAcaraForDetail.attachmentFileName}`)}
+                    className="px-4 py-2 bg-primary text-white hover:bg-primary/90 text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">download</span>
+                    <span>Unduh PDF</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-5 border-t border-surface-variant/30 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBeritaAcaraDetailModal(false);
+                  setSelectedBeritaAcaraForDetail(null);
+                }}
+                className="px-6 py-2.5 bg-surface-container hover:bg-surface-variant/30 text-on-surface-variant rounded-xl font-bold text-xs cursor-pointer transition-all"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DETAIL PRATINJAU BEASISWA (ADMIN) */}
+      {showBeasiswaDetailModal && selectedBeasiswaForDetail && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+          <div className="bg-surface-container-lowest rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl relative flex flex-col p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-surface-variant/30 mb-5">
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-2xl">school</span>
+                </span>
+                <div>
+                  <h3 className="font-bold text-lg text-on-surface">Detail Info Beasiswa</h3>
+                  <p className="text-xs text-on-surface-variant">Instansi: <strong className="text-primary">{selectedBeasiswaForDetail.provider}</strong></p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBeasiswaDetailModal(false);
+                  setSelectedBeasiswaForDetail(null);
+                }}
+                className="w-10 h-10 rounded-full bg-surface-container hover:bg-surface-variant/30 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="h-52 rounded-2xl overflow-hidden relative shadow-inner bg-surface-container">
+                <img
+                  src={selectedBeasiswaForDetail.bannerImg}
+                  alt={selectedBeasiswaForDetail.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 right-4 text-white space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 bg-primary text-white rounded-full text-xs font-bold">
+                      {selectedBeasiswaForDetail.category}
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      selectedBeasiswaForDetail.status === "Dibuka" ? "bg-emerald-600 text-white" : "bg-amber-600 text-white"
+                    }`}>
+                      Status: {selectedBeasiswaForDetail.status}
+                    </span>
+                  </div>
+                  <h2 className="font-extrabold text-xl md:text-2xl drop-shadow">{selectedBeasiswaForDetail.title}</h2>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 md:col-span-2 space-y-1">
+                  <p className="text-[11px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[15px]">card_giftcard</span>
+                    <span>Cakupan Pembiayaan & Benefit:</span>
+                  </p>
+                  <p className="text-sm font-bold text-on-surface leading-snug">
+                    {selectedBeasiswaForDetail.coverage}
+                  </p>
+                </div>
+
+                <div className="bg-surface-container border border-surface-variant/20 rounded-2xl p-4 space-y-1">
+                  <p className="text-[11px] font-bold text-outline uppercase tracking-wider flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[15px]">calendar_month</span>
+                    <span>Periode Pendaftaran:</span>
+                  </p>
+                  <p className="text-xs font-bold text-on-surface">
+                    {selectedBeasiswaForDetail.openDate} s.d. {selectedBeasiswaForDetail.closeDate}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[18px]">info</span>
+                  <span>Deskripsi Program</span>
+                </h4>
+                <p className="text-xs text-on-surface-variant leading-relaxed bg-surface-container-low p-4 rounded-2xl border border-surface-variant/20">
+                  {selectedBeasiswaForDetail.description}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[18px]">fact_check</span>
+                  <span>Persyaratan Pendaftar:</span>
+                </h4>
+                <div className="bg-surface-container-low p-4 rounded-2xl border border-surface-variant/20 space-y-2">
+                  <ul className="space-y-2">
+                    {selectedBeasiswaForDetail.requirements.map((req, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-xs text-on-surface">
+                        <span className="material-symbols-outlined text-primary text-[16px] shrink-0 mt-0.5">check_circle</span>
+                        <span>{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {selectedBeasiswaForDetail.selectionStages && (
+                <div className="space-y-2">
+                  <h4 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+                    <span>Tahapan Seleksi:</span>
+                  </h4>
+                  <div className="bg-surface-container-low p-4 rounded-2xl border border-surface-variant/20 text-xs font-medium text-on-surface leading-relaxed">
+                    {selectedBeasiswaForDetail.selectionStages}
+                  </div>
+                </div>
+              )}
+
+              {selectedBeasiswaForDetail.guideFileName && (
+                <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-primary text-3xl">picture_as_pdf</span>
+                    <div>
+                      <p className="font-bold text-xs text-on-surface">{selectedBeasiswaForDetail.guideFileName}</p>
+                      <p className="text-[10px] text-outline">Buku Panduan & Petunjuk Teknis Resmi • {selectedBeasiswaForDetail.guideFileSize || "2.5 MB"}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => alert(`Mengunduh dokumen panduan: ${selectedBeasiswaForDetail.guideFileName}`)}
+                    className="px-4 py-2 bg-primary text-on-primary hover:brightness-110 text-xs font-bold rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">download</span>
+                    <span>Unduh Panduan (PDF)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center pt-6 border-t border-surface-variant/30 mt-6">
+              {selectedBeasiswaForDetail.applyUrl ? (
+                <a
+                  href={selectedBeasiswaForDetail.applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline font-bold flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                  <span>Link Portal Pendaftaran</span>
+                </a>
+              ) : <div></div>}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBeasiswaDetailModal(false);
+                  setSelectedBeasiswaForDetail(null);
+                }}
+                className="px-6 py-2.5 bg-surface-container hover:bg-surface-variant/30 text-on-surface-variant rounded-xl font-bold text-xs cursor-pointer transition-all"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

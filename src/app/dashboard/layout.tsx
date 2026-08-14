@@ -205,34 +205,43 @@ export default function DashboardLayout({
             })}
 
             {/* Special Section for KIP */}
-            <div className="mt-8 mb-2 px-6">
-              <p className="font-label-sm text-label-sm text-outline-variant uppercase tracking-wider">
-                Khusus Mahasiswa
+            <div className="mt-6 mb-2 px-6">
+              <p className="font-label-sm text-label-sm text-outline-variant uppercase tracking-wider font-bold">
+                Informasi & Berita KIP-K
               </p>
             </div>
             <Link
-              href="/dashboard/profil"
+              href="/dashboard/berita-acara"
               onClick={handleLinkClick}
-              className="group relative text-on-surface-variant hover:bg-tertiary-fixed px-4 py-3 flex items-center gap-4 rounded-full transition-all active:scale-98 duration-150 mx-2 overflow-hidden"
+              className={`group relative px-4 py-3 flex items-center gap-4 rounded-full transition-all active:scale-98 duration-150 mx-2 overflow-hidden ${
+                pathname === "/dashboard/berita-acara"
+                  ? "bg-primary text-white font-bold shadow-sm"
+                  : "text-on-surface-variant hover:bg-surface-container-high"
+              }`}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-secondary-container/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <span className="material-symbols-outlined text-tertiary">
-                workspace_premium
+              <span className={`material-symbols-outlined ${pathname === "/dashboard/berita-acara" ? "text-white" : "text-tertiary"}`}>
+                newspaper
               </span>
-              <span className="font-label-md text-label-md font-bold text-tertiary">
-                Kegiatan KIP UNUSA
+              <span className="font-label-md text-label-md font-bold">
+                Berita Acara Kegiatan
               </span>
             </Link>
-            <a
-              href="#"
-              onClick={() => alert("Informasi Beasiswa akan segera dirilis!")}
-              className="text-on-surface-variant hover:bg-surface-container-high px-4 py-3 flex items-center gap-4 rounded-full transition-all active:scale-98 duration-150"
+            <Link
+              href="/dashboard/info-beasiswa"
+              onClick={handleLinkClick}
+              className={`px-4 py-3 flex items-center gap-4 rounded-full transition-all active:scale-98 duration-150 mx-2 ${
+                pathname === "/dashboard/info-beasiswa"
+                  ? "bg-primary text-white font-bold shadow-sm"
+                  : "text-on-surface-variant hover:bg-surface-container-high"
+              }`}
             >
-              <span className="material-symbols-outlined">
-                account_balance_wallet
+              <span className={`material-symbols-outlined ${pathname === "/dashboard/info-beasiswa" ? "text-white" : "text-secondary"}`}>
+                school
               </span>
-              <span className="font-label-md text-label-md">Info Beasiswa</span>
-            </a>
+              <span className="font-label-md text-label-md font-bold">
+                Info Beasiswa
+              </span>
+            </Link>
           </nav>
 
           {/* Bottom Sidebar Actions */}
